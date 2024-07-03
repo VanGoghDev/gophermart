@@ -36,7 +36,12 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	rtr := router.New(s, slog)
+	err = s.RunMigrations(cfg.DSN)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	rtr := router.New(slog, s, cfg.Secret, cfg.TokenExpires)
 
 	accrl := accrual.New()
 

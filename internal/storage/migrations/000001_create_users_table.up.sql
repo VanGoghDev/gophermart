@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS users (
+    login     TEXT PRIMARY KEY,
+    pass_hash VARCHAR(100) NOT NULL
+)
