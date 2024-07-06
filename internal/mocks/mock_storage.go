@@ -35,6 +35,36 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
+// GetOrder mocks base method.
+func (m *MockStorage) GetOrder(arg0 context.Context, arg1 string) (models.Order, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrder", arg0, arg1)
+	ret0, _ := ret[0].(models.Order)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOrder indicates an expected call of GetOrder.
+func (mr *MockStorageMockRecorder) GetOrder(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrder", reflect.TypeOf((*MockStorage)(nil).GetOrder), arg0, arg1)
+}
+
+// GetOrders mocks base method.
+func (m *MockStorage) GetOrders(arg0 context.Context, arg1 string) ([]models.Order, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrders", arg0, arg1)
+	ret0, _ := ret[0].([]models.Order)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOrders indicates an expected call of GetOrders.
+func (mr *MockStorageMockRecorder) GetOrders(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrders", reflect.TypeOf((*MockStorage)(nil).GetOrders), arg0, arg1)
+}
+
 // GetUser mocks base method.
 func (m *MockStorage) GetUser(arg0 context.Context, arg1, arg2 string) (models.User, error) {
 	m.ctrl.T.Helper()
@@ -63,4 +93,18 @@ func (m *MockStorage) RegisterUser(arg0 context.Context, arg1, arg2 string) (str
 func (mr *MockStorageMockRecorder) RegisterUser(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterUser", reflect.TypeOf((*MockStorage)(nil).RegisterUser), arg0, arg1, arg2)
+}
+
+// SaveOrder mocks base method.
+func (m *MockStorage) SaveOrder(arg0 context.Context, arg1, arg2 string, arg3 models.OrderStatus) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveOrder", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveOrder indicates an expected call of SaveOrder.
+func (mr *MockStorageMockRecorder) SaveOrder(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveOrder", reflect.TypeOf((*MockStorage)(nil).SaveOrder), arg0, arg1, arg2, arg3)
 }

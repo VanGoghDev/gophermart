@@ -29,6 +29,12 @@ func New(log *slog.Logger, s Register, secret string, tokenExpires time.Duration
 		const op = "handlers.auth.register.New"
 		log = log.With("op", op)
 
+		contentType := r.Header.Get("Content-Type")
+		if contentType != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		req := &Request{}
 
 		// 400 неверный формат запроса.
@@ -48,7 +54,7 @@ func New(log *slog.Logger, s Register, secret string, tokenExpires time.Duration
 		login, err := s.RegisterUser(r.Context(), req.Login, req.Password)
 		if err != nil {
 			// 409 логин уже занят.
-			if errors.Is(err, storage.ErrLoginAlreadyExists) {
+			if errors.Is(err, storage.ErrAlreadyExists) {
 				log.ErrorContext(r.Context(), "", sl.Err(err))
 				w.WriteHeader(http.StatusConflict)
 				return
@@ -67,7 +73,7 @@ func New(log *slog.Logger, s Register, secret string, tokenExpires time.Duration
 			return
 		}
 
-		// в случае успешной регистрации записать токен в хэдер.
+		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Authorization", token)
 	}
 }

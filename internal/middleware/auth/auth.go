@@ -11,7 +11,7 @@ import (
 
 type contextKey string
 
-const userIDKey contextKey = "user-login"
+const UserLoginKey contextKey = "user-login"
 
 func New(log *slog.Logger, secret string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -40,7 +40,7 @@ func New(log *slog.Logger, secret string) func(next http.Handler) http.Handler {
 						return
 					}
 					// валиден - все ок, передать инфу о пользователе в контекст
-					ctx = context.WithValue(ctx, userIDKey, login) // проверить что оно работает мб юнит тесты?
+					ctx = context.WithValue(ctx, UserLoginKey, login) // проверить что оно работает мб юнит тесты?
 				}
 			} else {
 				http.Error(w, "Authorization header is empty", http.StatusUnauthorized)

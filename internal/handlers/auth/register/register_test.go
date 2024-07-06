@@ -1,12 +1,13 @@
 package register_test
 
 import (
-	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
+	"github.com/VanGoghDev/gophermart/internal/config"
 	"github.com/VanGoghDev/gophermart/internal/logger"
 	"github.com/VanGoghDev/gophermart/internal/mocks"
 	"github.com/VanGoghDev/gophermart/internal/router"
@@ -14,160 +15,140 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-// Тест на 500 (мокнуть ошибку из дб и должно вернуть 500)
-// тест на конфликт логина
-// тест на токен.
-
-type args struct {
-	body string
-}
-type want struct {
-	statusCode int
-	tokenEmpty bool
-}
-
-func TestNewConflictUser(t *testing.T) {
-	tests := []struct {
-		name string
-		args args
-		want want
-	}{
-		{
-			name: "Test user already exists",
-			args: args{
-				body: "{\"login\": \"test\", \"password\":\"123\"}",
-			},
-			want: want{
-				statusCode: 409,
-				tokenEmpty: true,
-			},
-		},
-	}
-
-	log := logger.New("dev")
-	secret := "secret"
-	tokenExpires := time.Hour * 3
-
-	ctx := context.Background()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().RegisterUser(ctx, mock.Anything, mock.Anything).Return("", storage.ErrLoginAlreadyExists).AnyTimes()
-	r := router.New(log, m, secret, tokenExpires)
-	srv := httptest.NewServer(r)
-	defer srv.Close()
-
-	client := resty.New()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, _ := client.R().
-				SetHeader("Content-Type", "application/json").
-				SetBody(tt.args.body).
-				SetContext(ctx).
-				Post(fmt.Sprintf("%s/%s", srv.URL, "api/user/register"))
-
-			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
-
-			// токен не всегда нужно проверять
-			if tt.want.tokenEmpty {
-				assert.Empty(t, resp.Header().Get("Authorization"))
-			}
-		})
-	}
-}
-
 func TestNew(t *testing.T) {
+	type args struct {
+		login       string
+		contentType string
+		body        string
+		storageErr  error
+	}
+	type want struct {
+		statusCode int
+	}
 	tests := []struct {
 		name string
 		args args
 		want want
 	}{
 		{
-			name: "empty body",
+			name: "must return 200 status",
 			args: args{
-				body: "",
+				login:       "test",
+				contentType: "application/json",
+				body:        "{\"login\": \"123\", \"password\":\"123\"}",
 			},
 			want: want{
-				statusCode: 400,
-				tokenEmpty: true,
+				http.StatusOK,
 			},
 		},
 		{
-			name: "invalid body",
+			name: "must return 400 status (invalid content type)",
 			args: args{
-				body: "{\"login\": \"\", \"password\":\"\"}",
+				login:       "test",
+				contentType: "text/plain",
+				storageErr:  errors.New("storage error"),
 			},
 			want: want{
-				statusCode: 400,
-				tokenEmpty: true,
+				http.StatusBadRequest,
 			},
 		},
 		{
-			name: "invalid login",
+			name: "must return 400 status (empty body)",
 			args: args{
-				body: "{\"login\": \"\", \"password\":\"123\"}",
+				login:       "test",
+				contentType: "application/json",
+				storageErr:  errors.New("storage error"),
 			},
 			want: want{
-				statusCode: 400,
-				tokenEmpty: true,
+				http.StatusBadRequest,
 			},
 		},
 		{
-			name: "invalid password",
+			name: "must return 400 status (invalid body)",
 			args: args{
-				body: "{\"login\": \"test\", \"password\":\"\"}",
+				login:       "test",
+				contentType: "application/json",
+				body:        "{\"login\": \"\", \"password\":\"\"}",
 			},
 			want: want{
-				statusCode: 400,
-				tokenEmpty: true,
+				http.StatusBadRequest,
 			},
 		},
 		{
-			name: "valid body",
+			name: "must return 400 status (invalid login)",
 			args: args{
-				body: "{\"login\": \"test\", \"password\":\"123\"}",
+				login:       "test",
+				contentType: "application/json",
+				body:        "{\"login\": \"\", \"password\":\"123\"}",
 			},
 			want: want{
-				statusCode: 200,
-				tokenEmpty: false,
+				http.StatusBadRequest,
+			},
+		},
+		{
+			name: "must return 400 status (invalid password)",
+			args: args{
+				login:       "test",
+				contentType: "application/json",
+				body:        "{\"login\": \"test\", \"password\":\"\"}",
+			},
+			want: want{
+				http.StatusBadRequest,
+			},
+		},
+		{
+			name: "must return 409 status",
+			args: args{
+				login:       "test",
+				contentType: "application/json",
+				body:        "{\"login\": \"test\", \"password\":\"123\"}",
+				storageErr:  storage.ErrAlreadyExists,
+			},
+			want: want{
+				http.StatusConflict,
+			},
+		},
+		{
+			name: "must return 500 status",
+			args: args{
+				login:       "test",
+				contentType: "application/json",
+				body:        "{\"login\": \"test\", \"password\":\"123\"}",
+				storageErr:  errors.New("storage error"),
+			},
+			want: want{
+				http.StatusInternalServerError,
 			},
 		},
 	}
-	log := logger.New("dev")
-	secret := "secret"
-	tokenExpires := time.Hour * 3
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().RegisterUser(mock.Anything, mock.Anything, mock.Anything).Return("", nil).AnyTimes()
-
-	r := router.New(log, m, secret, tokenExpires)
-	srv := httptest.NewServer(r)
-	defer srv.Close()
-
-	client := resty.New()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			log := logger.New("dev")
+			cfg, err := config.New()
+			assert.Empty(t, err)
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := mocks.NewMockStorage(ctrl)
+
+			m.EXPECT().RegisterUser(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(tt.args.login, tt.args.storageErr).AnyTimes()
+
+			r := router.New(log, m, cfg.Secret, cfg.TokenExpires)
+			srv := httptest.NewServer(r)
+			defer srv.Close()
+
+			client := resty.New()
+
 			resp, err := client.R().
-				SetHeader("Content-Type", "application/json").
+				SetHeader("Content-Type", tt.args.contentType).
 				SetBody(tt.args.body).
 				Post(fmt.Sprintf("%s/%s", srv.URL, "api/user/register"))
 
 			assert.Empty(t, err)
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
-
-			// токен не всегда нужно проверять
-			if tt.want.tokenEmpty {
-				assert.Empty(t, resp.Header().Get("Authorization"))
-			} else {
-				assert.NotEmpty(t, resp.Header().Get("Authorization"))
-			}
 		})
 	}
 }

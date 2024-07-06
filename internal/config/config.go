@@ -14,5 +14,12 @@ type Config struct {
 func New() (config *Config, err error) {
 	// не забыть, что в этот раз флаги имеют более высокий приоритет
 
-	return &Config{}, nil
+	return &Config{
+		Address:        "localhost:8080",
+		Env:            "local",
+		DSN:            "postgres://postgres:Kd100817@localhost:5440/template1?sslmode=disable",
+		AccrualAddress: "",
+		Secret:         "secret",
+		TokenExpires:   time.Hour * 3,
+	}, nil
 }

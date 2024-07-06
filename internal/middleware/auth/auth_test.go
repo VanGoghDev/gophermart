@@ -1,16 +1,16 @@
 package auth_test
 
 import (
-	"context"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/VanGoghDev/gophermart/internal/logger"
-	"github.com/VanGoghDev/gophermart/internal/router"
-	"github.com/VanGoghDev/gophermart/internal/services/auth"
-	"github.com/VanGoghDev/gophermart/internal/storage"
+	"github.com/VanGoghDev/gophermart/internal/middleware/auth"
+	sauth "github.com/VanGoghDev/gophermart/internal/services/auth"
+	"github.com/go-chi/chi"
 	"github.com/go-resty/resty/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
@@ -44,7 +44,7 @@ func TestNew(t *testing.T) {
 				tokenExpires: time.Second * 5,
 			},
 			want: want{
-				statusCode: 200,
+				statusCode: http.StatusOK,
 			},
 		},
 		{
@@ -55,7 +55,7 @@ func TestNew(t *testing.T) {
 				tokenExpires: time.Second * 5,
 			},
 			want: want{
-				statusCode: 401,
+				statusCode: http.StatusUnauthorized,
 			},
 		},
 		{
@@ -66,7 +66,7 @@ func TestNew(t *testing.T) {
 				tokenExpires: time.Millisecond * 5,
 			},
 			want: want{
-				statusCode: 401,
+				statusCode: http.StatusUnauthorized,
 			},
 		},
 		{
@@ -77,7 +77,7 @@ func TestNew(t *testing.T) {
 				tokenExpires: time.Second * 5,
 			},
 			want: want{
-				statusCode: 401,
+				statusCode: http.StatusUnauthorized,
 			},
 		},
 		{
@@ -89,17 +89,25 @@ func TestNew(t *testing.T) {
 				brokenUserLoginClaim: true,
 			},
 			want: want{
-				statusCode: 401,
+				statusCode: http.StatusUnauthorized,
 			},
 		},
 	}
 
 	log := logger.New("dev")
-	tokenExpires := time.Second * 5
 	serverSecret := "secret"
-	s, _ := storage.New(context.Background(), "")
 
-	r := router.New(log, s, serverSecret, tokenExpires)
+	r := chi.NewRouter()
+
+	r.Route("/api/user", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(auth.New(log, serverSecret))
+			r.Get("/orders", func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			})
+		})
+	})
+
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
@@ -107,7 +115,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, err := auth.GenerateToken(tt.args.login, tt.args.clientSecret, tt.args.tokenExpires)
+			token, err := sauth.GenerateToken(tt.args.login, tt.args.clientSecret, tt.args.tokenExpires)
 			if tt.args.brokenUserLoginClaim {
 				tkn := jwt.NewWithClaims(jwt.SigningMethodHS256, fakeClaims{
 					RegisteredClaims: jwt.RegisteredClaims{
@@ -125,8 +133,7 @@ func TestNew(t *testing.T) {
 			resp, _ := client.R().
 				SetHeader("Content-Type", "application/json").
 				SetHeader("Authorization", token).
-				SetBody("").
-				Post(fmt.Sprintf("%s/%s", srv.URL, "api/user/orders"))
+				Get(fmt.Sprintf("%s/%s", srv.URL, "api/user/orders"))
 
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
 		})

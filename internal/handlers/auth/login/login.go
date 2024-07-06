@@ -30,6 +30,12 @@ func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Dura
 		const op = "handlers.auth.login.New"
 		log = log.With("op", op)
 
+		contentType := r.Header.Get("Content-Type")
+		if contentType != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		req := &Request{}
 
 		dec := json.NewDecoder(r.Body)
@@ -50,7 +56,7 @@ func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Dura
 		// 401 неверная пара логин/пароль.
 		user, err := s.GetUser(r.Context(), req.Login, req.Password)
 		if err != nil {
-			if errors.Is(err, storage.ErrUserNotFound) {
+			if errors.Is(err, storage.ErrNotFound) {
 				w.WriteHeader(http.StatusUnauthorized) // нужна ли эта обработка?
 				return
 			}
@@ -72,6 +78,8 @@ func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Dura
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Authorization", token)
 	}
 }
