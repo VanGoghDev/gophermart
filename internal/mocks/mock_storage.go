@@ -35,6 +35,21 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
+// GetBalance mocks base method.
+func (m *MockStorage) GetBalance(arg0 context.Context, arg1 string) (models.Balance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBalance", arg0, arg1)
+	ret0, _ := ret[0].(models.Balance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBalance indicates an expected call of GetBalance.
+func (mr *MockStorageMockRecorder) GetBalance(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBalance", reflect.TypeOf((*MockStorage)(nil).GetBalance), arg0, arg1)
+}
+
 // GetOrder mocks base method.
 func (m *MockStorage) GetOrder(arg0 context.Context, arg1 string) (models.Order, error) {
 	m.ctrl.T.Helper()
@@ -80,6 +95,21 @@ func (mr *MockStorageMockRecorder) GetUser(arg0, arg1, arg2 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockStorage)(nil).GetUser), arg0, arg1, arg2)
 }
 
+// GetWithdrawals mocks base method.
+func (m *MockStorage) GetWithdrawals(arg0 context.Context, arg1 string) ([]models.Withdrawal, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWithdrawals", arg0, arg1)
+	ret0, _ := ret[0].([]models.Withdrawal)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWithdrawals indicates an expected call of GetWithdrawals.
+func (mr *MockStorageMockRecorder) GetWithdrawals(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithdrawals", reflect.TypeOf((*MockStorage)(nil).GetWithdrawals), arg0, arg1)
+}
+
 // RegisterUser mocks base method.
 func (m *MockStorage) RegisterUser(arg0 context.Context, arg1, arg2 string) (string, error) {
 	m.ctrl.T.Helper()
@@ -107,4 +137,18 @@ func (m *MockStorage) SaveOrder(arg0 context.Context, arg1, arg2 string, arg3 mo
 func (mr *MockStorageMockRecorder) SaveOrder(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveOrder", reflect.TypeOf((*MockStorage)(nil).SaveOrder), arg0, arg1, arg2, arg3)
+}
+
+// SaveWithdrawal mocks base method.
+func (m *MockStorage) SaveWithdrawal(arg0 context.Context, arg1, arg2 string, arg3 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveWithdrawal", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveWithdrawal indicates an expected call of SaveWithdrawal.
+func (mr *MockStorageMockRecorder) SaveWithdrawal(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveWithdrawal", reflect.TypeOf((*MockStorage)(nil).SaveWithdrawal), arg0, arg1, arg2, arg3)
 }

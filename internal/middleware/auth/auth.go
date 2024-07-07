@@ -39,6 +39,10 @@ func New(log *slog.Logger, secret string) func(next http.Handler) http.Handler {
 						w.WriteHeader(http.StatusUnauthorized)
 						return
 					}
+					if login == "" {
+						w.WriteHeader(http.StatusUnauthorized)
+						return
+					}
 					// валиден - все ок, передать инфу о пользователе в контекст
 					ctx = context.WithValue(ctx, UserLoginKey, login) // проверить что оно работает мб юнит тесты?
 				}

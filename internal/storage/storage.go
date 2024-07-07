@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	ErrNotFound      = errors.New("records not found")
-	ErrAlreadyExists = errors.New("record alreay exists")
+	ErrNotFound       = errors.New("records not found")
+	ErrAlreadyExists  = errors.New("record alreay exists")
+	ErrNotEnoughFunds = errors.New("not enough funds")
 )
 
 type Storage struct {
@@ -142,6 +143,18 @@ func (s *Storage) SaveOrder(
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
+	return nil
+}
+
+func (s *Storage) GetBalance(ctx context.Context, userLogin string) (models.Balance, error) {
+	return models.Balance{}, nil
+}
+
+func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) ([]models.Withdrawal, error) {
+	return nil, nil
+}
+
+func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum int64) error {
 	return nil
 }
 

@@ -15,13 +15,13 @@ import (
 	"github.com/VanGoghDev/gophermart/internal/storage"
 )
 
+type Register interface {
+	RegisterUser(ctx context.Context, login string, password string) (lgn string, err error)
+}
+
 type Request struct {
 	Login    string `json:"login" validate:"required"`
 	Password string `json:"password" validate:"required"`
-}
-
-type Register interface {
-	RegisterUser(ctx context.Context, login string, password string) (lgn string, err error)
 }
 
 func New(log *slog.Logger, s Register, secret string, tokenExpires time.Duration) http.HandlerFunc {

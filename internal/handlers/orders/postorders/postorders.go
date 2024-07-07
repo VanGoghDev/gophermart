@@ -36,10 +36,6 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		if userLogin == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
 
 		bNum, err := io.ReadAll(r.Body)
 		if err != nil {
