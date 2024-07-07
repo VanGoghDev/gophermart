@@ -173,6 +173,9 @@ func TestNew(t *testing.T) {
 
 			assert.Empty(t, err)
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
+			if resp.StatusCode() == http.StatusOK {
+				assert.NotEmpty(t, resp.Header().Get("Authorization"))
+			}
 		})
 	}
 }
