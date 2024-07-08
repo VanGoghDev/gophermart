@@ -47,8 +47,8 @@ func New(log *slog.Logger, storage Storage, tokenSecret string, tokenExpires tim
 				r.Get("/", getbalance.New(log, storage))
 
 				r.Post("/withdraw", postwithdraw.New(log, storage, storage, storage))
-				r.Get("/withdrawals", getwithdrawals.New(log, storage))
 			})
+			r.Get("/withdrawals", getwithdrawals.New(log, storage))
 		})
 	})
 	return r

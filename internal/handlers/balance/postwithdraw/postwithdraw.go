@@ -35,6 +35,12 @@ func New(log *slog.Logger, s WithdrawalSaver, su UserProvider, so OrderProvider)
 		const op = "handlers.balance.postwithdraw.New"
 		log = log.With("op", op)
 
+		contentType := r.Header.Get("Content-Type")
+		if contentType != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		userLogin, ok := r.Context().Value(auth.UserLoginKey).(string)
 		if !ok {
 			w.WriteHeader(http.StatusInternalServerError)
