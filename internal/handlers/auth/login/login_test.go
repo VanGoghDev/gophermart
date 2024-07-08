@@ -156,7 +156,7 @@ func TestNew(t *testing.T) {
 				tt.args.storageUser.PassHash = passHash
 			}
 
-			m.EXPECT().GetUser(gomock.Any(), gomock.Any(), gomock.Any()).
+			m.EXPECT().GetUser(gomock.Any(), gomock.Any()).
 				Return(tt.args.storageUser, tt.args.storageErr).AnyTimes()
 
 			r := router.New(log, m, cfg.Secret, cfg.TokenExpires)

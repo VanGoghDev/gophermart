@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/VanGoghDev/gophermart/internal/domain/models"
@@ -25,10 +26,11 @@ var (
 )
 
 type Storage struct {
-	db *pgxpool.Pool
+	log *slog.Logger
+	db  *pgxpool.Pool
 }
 
-func New(ctx context.Context, storagePath string) (*Storage, error) {
+func New(ctx context.Context, log *slog.Logger, storagePath string) (*Storage, error) {
 	const op = "storage.New"
 
 	pool, err := pgxpool.New(ctx, storagePath)
@@ -36,7 +38,8 @@ func New(ctx context.Context, storagePath string) (*Storage, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	return &Storage{
-		db: pool,
+		log: log,
+		db:  pool,
 	}, nil
 }
 
@@ -63,10 +66,10 @@ func (s *Storage) RegisterUser(ctx context.Context, login string, password strin
 	return login, nil
 }
 
-func (s *Storage) GetUser(ctx context.Context, login string, password string) (user models.User, err error) {
+func (s *Storage) GetUser(ctx context.Context, login string) (user models.User, err error) {
 	const op = "storage.GetUser"
-	row := s.db.QueryRow(ctx, "SELECT login, pass_hash FROM users")
-	err = row.Scan(&user.Login, &user.PassHash)
+	row := s.db.QueryRow(ctx, "SELECT login, pass_hash, balance FROM users")
+	err = row.Scan(&user.Login, &user.PassHash, &user.Balance)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.User{}, ErrNotFound
@@ -130,6 +133,7 @@ func (s *Storage) SaveOrder(
 	status models.OrderStatus,
 ) (err error) {
 	const op = "storage.SaveOrder"
+
 	_, err = s.db.Exec(ctx, "INSERT INTO orders(number, user_login, status) VALUES($1, $2, $3)",
 		number, userLogin, status)
 	if err != nil {
@@ -146,15 +150,94 @@ func (s *Storage) SaveOrder(
 	return nil
 }
 
-func (s *Storage) GetBalance(ctx context.Context, userLogin string) (models.Balance, error) {
-	return models.Balance{}, nil
+func (s *Storage) GetBalance(ctx context.Context, userLogin string) (balance models.Balance, err error) {
+	const op = "storage.GetBalance"
+
+	row := s.db.QueryRow(ctx, "SELECT u.balance, total FROM users u "+
+		"INNER JOIN (SELECT user_login, SUM(withdrawal_sum) AS total FROM withdrawals GROUP BY user_login) "+
+		"W On W.user_login = u.login WHERE u.login = $1;", userLogin)
+	err = row.Scan(&balance.Current, &balance.Withdrawn)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Balance{}, ErrNotFound
+		}
+		return models.Balance{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return balance, nil
 }
 
-func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) ([]models.Withdrawal, error) {
-	return nil, nil
+func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) (withdrawals []models.Withdrawal, err error) {
+	const op = "storage.GetWithdrawals"
+	withdrawals = make([]models.Withdrawal, 0)
+
+	rows, err := s.db.Query(
+		ctx,
+		"SELECT order_id, withdrawal_sum, processed_at FROM withdrawals WHERE user_login = $1 ORDER by processed_at",
+		userLogin,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var w = models.Withdrawal{}
+		err = rows.Scan(&w.OrderNumber, &w.Sum, &w.ProcessedAt)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+		w.ProcessedAtFormated = w.ProcessedAt.Format(time.RFC3339)
+		withdrawals = append(withdrawals, w)
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return withdrawals, nil
 }
 
-func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum int64) error {
+func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum int64) (err error) {
+	const op = "storage.SaveOrder"
+
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				s.log.ErrorContext(ctx, "%s: %w", op, err)
+			}
+		}
+	}()
+
+	_, err = tx.Prepare(ctx, "insrtWithdrawals", "INSERT INTO withdrawals(user_login, order_id, withdrawal_sum)"+
+		"VALUES($1, $2, $3)")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = tx.Prepare(ctx, "sbtrBalance", "UPDATE users SET balance = balance - $1 WHERE login = $2")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = tx.Exec(ctx, "insrtWithdrawals", userLogin, orderNum, sum)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = tx.Exec(ctx, "sbtrBalance", sum, userLogin)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
 	return nil
 }
 

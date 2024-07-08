@@ -19,7 +19,7 @@ import (
 
 type Storage interface {
 	RegisterUser(ctx context.Context, login string, password string) (string, error)
-	GetUser(ctx context.Context, userLogin string, password string) (models.User, error)
+	GetUser(ctx context.Context, userLogin string) (models.User, error)
 
 	GetOrder(ctx context.Context, number string) (models.Order, error)
 	GetOrders(ctx context.Context, userLogin string) ([]models.Order, error)
@@ -43,10 +43,12 @@ func New(log *slog.Logger, storage Storage, tokenSecret string, tokenExpires tim
 			r.Post("/orders", postorders.New(log, storage, storage))
 			r.Get("/orders", getorders.New(log, storage))
 
-			r.Get("/balance", getbalance.New(log, storage))
+			r.Route("/balance", func(r chi.Router) {
+				r.Get("/", getbalance.New(log, storage))
 
-			r.Post("/withdraw", getwithdrawals.New(log, storage))
-			r.Get("/withdrawals", postwithdraw.New(log, storage))
+				r.Post("/withdraw", postwithdraw.New(log, storage, storage, storage))
+				r.Get("/withdrawals", getwithdrawals.New(log, storage))
+			})
 		})
 	})
 	return r

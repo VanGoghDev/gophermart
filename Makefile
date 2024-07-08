@@ -29,3 +29,6 @@ _golangci-lint-rm-unformatted-report: _golangci-lint-format-report
 .PHONY: golangci-lint-clean
 golangci-lint-clean:
 	sudo rm -rf ./golangci-lint 
+
+MockStorage:
+	mockgen -destination=internal/mocks/mock_storage.go -package=mocks github.com/VanGoghDev/gophermart/internal/router Storage

@@ -81,18 +81,18 @@ func (mr *MockStorageMockRecorder) GetOrders(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // GetUser mocks base method.
-func (m *MockStorage) GetUser(arg0 context.Context, arg1, arg2 string) (models.User, error) {
+func (m *MockStorage) GetUser(arg0 context.Context, arg1 string) (models.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUser", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetUser", arg0, arg1)
 	ret0, _ := ret[0].(models.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetUser indicates an expected call of GetUser.
-func (mr *MockStorageMockRecorder) GetUser(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) GetUser(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockStorage)(nil).GetUser), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockStorage)(nil).GetUser), arg0, arg1)
 }
 
 // GetWithdrawals mocks base method.

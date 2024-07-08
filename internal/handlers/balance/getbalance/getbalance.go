@@ -24,10 +24,6 @@ func New(log *slog.Logger, s BalanceProvider) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		if userLogin == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
 
 		balance, err := s.GetBalance(r.Context(), userLogin)
 		if err != nil {

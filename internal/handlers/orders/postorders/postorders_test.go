@@ -71,17 +71,6 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "must return 401 status",
-			args: args{
-				login:       "",
-				contentType: "text/plain",
-				body:        "123456",
-			},
-			want: want{
-				http.StatusUnauthorized,
-			},
-		},
-		{
 			name: "must return 409 status",
 			args: args{
 				login:           "testLogin",

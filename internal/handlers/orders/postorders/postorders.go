@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/VanGoghDev/gophermart/internal/domain/models"
+	"github.com/VanGoghDev/gophermart/internal/lib/logger/sl"
 	"github.com/VanGoghDev/gophermart/internal/middleware/auth"
 	"github.com/VanGoghDev/gophermart/internal/storage"
 )
@@ -23,6 +24,7 @@ type OrdersSaver interface {
 func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.orders.postorders.New"
+		log = log.With("op", op)
 
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "text/plain" {
@@ -39,7 +41,7 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 
 		bNum, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.ErrorContext(r.Context(), "%s: %w", op, err)
+			log.ErrorContext(r.Context(), "", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -57,8 +59,11 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 
 		order, err := sp.GetOrder(r.Context(), string(bNum))
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+			if !errors.Is(err, storage.ErrNotFound) {
+				log.ErrorContext(r.Context(), "", sl.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 		if order.UserLogin != userLogin && order.UserLogin != "" {
 			w.WriteHeader(http.StatusConflict)
@@ -72,7 +77,7 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 				w.WriteHeader(http.StatusOK)
 				return
 			}
-			log.ErrorContext(r.Context(), "%s: %w", op, err)
+			log.ErrorContext(r.Context(), "", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

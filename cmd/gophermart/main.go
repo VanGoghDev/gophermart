@@ -31,7 +31,7 @@ func run(ctx context.Context) error {
 	slog := logger.New(cfg.Env)
 	slog.DebugContext(ctx, "server started", "address", cfg.Address)
 
-	s, err := storage.New(ctx, cfg.DSN)
+	s, err := storage.New(ctx, slog, cfg.DSN)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

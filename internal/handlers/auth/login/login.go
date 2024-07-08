@@ -22,7 +22,7 @@ type Request struct {
 }
 
 type UserProvider interface {
-	GetUser(ctx context.Context, login string, password string) (models.User, error)
+	GetUser(ctx context.Context, login string) (models.User, error)
 }
 
 func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Duration) http.HandlerFunc {
@@ -54,7 +54,7 @@ func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Dura
 		}
 
 		// 401 неверная пара логин/пароль.
-		user, err := s.GetUser(r.Context(), req.Login, req.Password)
+		user, err := s.GetUser(r.Context(), req.Login)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				w.WriteHeader(http.StatusUnauthorized) // нужна ли эта обработка?
