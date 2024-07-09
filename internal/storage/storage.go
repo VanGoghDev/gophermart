@@ -23,6 +23,7 @@ var (
 	ErrNotFound       = errors.New("records not found")
 	ErrAlreadyExists  = errors.New("record alreay exists")
 	ErrNotEnoughFunds = errors.New("not enough funds")
+	ErrConflict       = errors.New("conflict")
 )
 
 type Storage struct {
@@ -134,16 +135,42 @@ func (s *Storage) SaveOrder(
 ) (err error) {
 	const op = "storage.SaveOrder"
 
-	_, err = s.db.Exec(ctx, "INSERT INTO orders(number, user_login, status) VALUES($1, $2, $3)",
-		number, userLogin, status)
-	if err != nil {
-		var pgErr *pq.Error
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return ErrAlreadyExists
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				s.log.ErrorContext(ctx, "%s: %w", op, err)
 			}
+		}
+	}()
+
+	var ordrNum, usrLogin string
+	err = tx.QueryRow(ctx, "SELECT number, user_login FROM orders WHERE number = $1", number).Scan(&ordrNum, &usrLogin)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%s: %w", op, err)
 		}
+	}
+	if ordrNum != "" {
+		return ErrConflict
+	}
+
+	if usrLogin != userLogin && usrLogin != "" {
+		return ErrConflict
+	}
+
+	_, err = tx.Prepare(ctx, "saveOrder", "INSERT INTO orders(number, user_login, status) VALUES($1, $2, $3)")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = tx.Exec(ctx, "saveOrder", number, userLogin, status)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -180,6 +207,7 @@ func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) (withdra
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	defer rows.Close()
@@ -201,7 +229,7 @@ func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) (withdra
 }
 
 func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum int64) (err error) {
-	const op = "storage.SaveOrder"
+	const op = "storage.SaveWithdrawal"
 
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	defer func() {
@@ -211,6 +239,25 @@ func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum
 			}
 		}
 	}()
+
+	var ordrNum string
+	err = tx.QueryRow(ctx, "SELECT number FROM orders WHERE number = $1", orderNum).
+		Scan(&ordrNum)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	var balance int64
+	err = tx.QueryRow(ctx, "SELECT balance FROM users WHERE login=$1 FOR UPDATE", userLogin).Scan(&balance)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	if balance < sum {
+		return ErrNotEnoughFunds
+	}
 
 	_, err = tx.Prepare(ctx, "insrtWithdrawals", "INSERT INTO withdrawals(user_login, order_id, withdrawal_sum)"+
 		"VALUES($1, $2, $3)")

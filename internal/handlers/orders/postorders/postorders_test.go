@@ -76,6 +76,7 @@ func TestNew(t *testing.T) {
 				login:           "testLogin",
 				contentType:     "text/plain",
 				body:            "123456",
+				storagePostErr:  storage.ErrConflict,
 				storageGetOrder: models.Order{UserLogin: "testLogin2"},
 			},
 			want: want{
@@ -91,18 +92,6 @@ func TestNew(t *testing.T) {
 			},
 			want: want{
 				http.StatusUnprocessableEntity,
-			},
-		},
-		{
-			name: "must return 500 status",
-			args: args{
-				login:         "testLogin",
-				contentType:   "text/plain",
-				body:          "123456",
-				storageGetErr: errors.New("storage error"),
-			},
-			want: want{
-				http.StatusInternalServerError,
 			},
 		},
 		{

@@ -57,21 +57,12 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 			return
 		}
 
-		order, err := sp.GetOrder(r.Context(), string(bNum))
-		if err != nil {
-			if !errors.Is(err, storage.ErrNotFound) {
-				log.ErrorContext(r.Context(), "", sl.Err(err))
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-		}
-		if order.UserLogin != userLogin && order.UserLogin != "" {
-			w.WriteHeader(http.StatusConflict)
-			return
-		}
-
 		err = s.SaveOrder(r.Context(), string(bNum), userLogin, models.New)
 		if err != nil {
+			if errors.Is(err, storage.ErrConflict) {
+				w.WriteHeader(http.StatusConflict)
+				return
+			}
 			if errors.Is(err, storage.ErrAlreadyExists) {
 				log.InfoContext(r.Context(), "user already has this order")
 				w.WriteHeader(http.StatusOK)

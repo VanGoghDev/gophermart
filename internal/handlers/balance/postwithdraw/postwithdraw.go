@@ -55,31 +55,16 @@ func New(log *slog.Logger, s WithdrawalSaver, su UserProvider, so OrderProvider)
 			return
 		}
 
-		user, err := su.GetUser(r.Context(), userLogin)
-		if err != nil {
-			log.ErrorContext(r.Context(), "", sl.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		if user.Balance < req.Sum {
-			w.WriteHeader(http.StatusPaymentRequired)
-			return
-		}
-
-		_, err = so.GetOrder(r.Context(), req.OrderNum)
+		err = s.SaveWithdrawal(r.Context(), userLogin, req.OrderNum, req.Sum)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				w.WriteHeader(http.StatusUnprocessableEntity)
 				return
 			}
-			log.ErrorContext(r.Context(), "", sl.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		err = s.SaveWithdrawal(r.Context(), userLogin, req.OrderNum, req.Sum)
-		if err != nil {
+			if errors.Is(err, storage.ErrNotEnoughFunds) {
+				w.WriteHeader(http.StatusPaymentRequired)
+				return
+			}
 			log.ErrorContext(r.Context(), "", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return

@@ -23,9 +23,7 @@ func TestNew(t *testing.T) {
 	type args struct {
 		contentType              string
 		body                     string
-		storageGetUserErr        error
 		storageUser              models.User
-		storageGetOrderErr       error
 		storageSaveWithdrawalErr error
 	}
 	tests := []struct {
@@ -65,7 +63,7 @@ func TestNew(t *testing.T) {
 				storageUser: models.User{
 					Balance: 200,
 				},
-				storageGetOrderErr: storage.ErrNotFound,
+				storageSaveWithdrawalErr: storage.ErrNotEnoughFunds,
 			},
 			wantStatusCode: http.StatusPaymentRequired,
 		},
@@ -77,7 +75,7 @@ func TestNew(t *testing.T) {
 				storageUser: models.User{
 					Balance: 400,
 				},
-				storageGetOrderErr: storage.ErrNotFound,
+				storageSaveWithdrawalErr: storage.ErrNotFound,
 			},
 			wantStatusCode: http.StatusUnprocessableEntity,
 		},
@@ -90,27 +88,6 @@ func TestNew(t *testing.T) {
 					Balance: 400,
 				},
 				storageSaveWithdrawalErr: errors.New("storage error"),
-			},
-			wantStatusCode: http.StatusInternalServerError,
-		},
-		{
-			name: "must return 500 status (get order error)",
-			args: args{
-				contentType: "application/json",
-				body:        "{\"order\": \"123456\", \"sum\": 256}",
-				storageUser: models.User{
-					Balance: 400,
-				},
-				storageGetOrderErr: errors.New("storage error"),
-			},
-			wantStatusCode: http.StatusInternalServerError,
-		},
-		{
-			name: "must return 500 status (get user error)",
-			args: args{
-				contentType:       "application/json",
-				body:              "{\"order\": \"123456\", \"sum\": 256}",
-				storageGetUserErr: errors.New("storage error"),
 			},
 			wantStatusCode: http.StatusInternalServerError,
 		},
@@ -127,12 +104,6 @@ func TestNew(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := mocks.NewMockStorage(ctrl)
-
-			m.EXPECT().GetUser(gomock.Any(), gomock.Any()).
-				Return(tt.args.storageUser, tt.args.storageGetUserErr).AnyTimes()
-
-			m.EXPECT().GetOrder(gomock.Any(), gomock.Any()).
-				Return(models.Order{}, tt.args.storageGetOrderErr).AnyTimes()
 
 			m.EXPECT().SaveWithdrawal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(tt.args.storageSaveWithdrawalErr).AnyTimes()
