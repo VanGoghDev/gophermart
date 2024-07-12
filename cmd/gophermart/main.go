@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/VanGoghDev/gophermart/internal/config"
 	"github.com/VanGoghDev/gophermart/internal/logger"
 	"github.com/VanGoghDev/gophermart/internal/router"
 	"github.com/VanGoghDev/gophermart/internal/services/accrual"
+	"github.com/VanGoghDev/gophermart/internal/services/accrual/orderspool"
+	"github.com/VanGoghDev/gophermart/internal/services/accrual/updater"
 	"github.com/VanGoghDev/gophermart/internal/storage"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -43,15 +47,27 @@ func run(ctx context.Context) error {
 
 	rtr := router.New(slog, s, cfg.Secret, cfg.TokenExpires)
 
-	accrl := accrual.New()
+	oPool := orderspool.New(slog, s)
+	updtr := updater.New(slog, s, cfg.AccrualAddress)
+	accrl := accrual.New(slog, oPool, updtr)
 
 	// waitgroup?
-	go accrl.Serve()
+	var wg sync.WaitGroup
+
+	g, ctx := errgroup.WithContext(context.Background())
+	g.Go(func() error {
+		err := accrl.RunService(ctx, g, &wg)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+		return nil
+	})
 
 	err = http.ListenAndServe(cfg.Address, rtr)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
+	wg.Wait()
 	return nil
 }

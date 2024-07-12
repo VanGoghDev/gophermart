@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"time"
 
@@ -230,8 +231,11 @@ func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) (withdra
 
 func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum int64) (err error) {
 	const op = "storage.SaveWithdrawal"
-
+	log.Print(op)
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(ctx); err != nil {
@@ -265,7 +269,7 @@ func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = tx.Prepare(ctx, "sbtrBalance", "UPDATE users SET balance = balance - $1 WHERE login = $2")
+	_, err = tx.Prepare(ctx, "updBalance", "UPDATE users SET balance = balance - $1 WHERE login = $2")
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -275,7 +279,84 @@ func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = tx.Exec(ctx, "sbtrBalance", sum, userLogin)
+	_, err = tx.Exec(ctx, "updBalance", sum, userLogin)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+func (s *Storage) GetOrdersByStatus(
+	ctx context.Context,
+	statuses ...models.OrderStatus,
+) (orders []models.Order, err error) {
+	const op = "storage.GetOrdersByStatus"
+	orders = make([]models.Order, 0)
+
+	rows, err := s.db.Query(ctx, "SELECT number FROM orders WHERE status = ANY($1)", pq.Array(statuses))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var order = models.Order{}
+		err = rows.Scan(&order.Number)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+		orders = append(orders, order)
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	return orders, nil
+}
+
+func (s *Storage) UpdateStatusAndBalance(ctx context.Context, accrual models.Accrual) error {
+	const op = "storage.UpdateStatusAndBalance"
+
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				s.log.ErrorContext(ctx, "%s: %w", op, err)
+			}
+		}
+	}()
+	var userLogin string
+	err = tx.QueryRow(ctx, "SELECT user_login FROM orders WHERE number = $1", accrual.OrderNum).Scan(&userLogin)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = tx.Prepare(ctx, "updtBalance", "UPDATE users SET balance = balance + $1 WHERE login = $2")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = tx.Prepare(ctx, "updStatus", "UPDATE orders SET status = $1 accrual = $2 WHERE number = $3")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = tx.Exec(ctx, "updtBalance", accrual.Accrual, userLogin)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = tx.Exec(ctx, "updStatus", accrual.Status, accrual.Accrual, accrual.OrderNum)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
