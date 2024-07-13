@@ -15,6 +15,8 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.31.0
 )
 
+require github.com/caarlos0/env v3.5.0+incompatible
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
