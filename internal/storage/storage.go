@@ -256,7 +256,7 @@ func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) (withdra
 	return withdrawals, nil
 }
 
-func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum int64) (err error) {
+func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum float64) (err error) {
 	const op = "storage.SaveWithdrawal"
 	log.Print(op)
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
@@ -281,7 +281,7 @@ func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	var balance int64
+	var balance float64
 	err = tx.QueryRow(ctx, "SELECT balance FROM users WHERE login=$1 FOR UPDATE", userLogin).Scan(&balance)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)

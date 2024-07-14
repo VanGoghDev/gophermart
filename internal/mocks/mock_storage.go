@@ -140,7 +140,7 @@ func (mr *MockStorageMockRecorder) SaveOrder(arg0, arg1, arg2, arg3 interface{})
 }
 
 // SaveWithdrawal mocks base method.
-func (m *MockStorage) SaveWithdrawal(arg0 context.Context, arg1, arg2 string, arg3 int64) error {
+func (m *MockStorage) SaveWithdrawal(arg0 context.Context, arg1, arg2 string, arg3 float64) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SaveWithdrawal", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)

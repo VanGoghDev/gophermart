@@ -22,12 +22,12 @@ type OrderProvider interface {
 }
 
 type WithdrawalSaver interface {
-	SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum int64) error
+	SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum float64) error
 }
 
 type Request struct {
-	OrderNum string `json:"order"`
-	Sum      int64  `json:"sum"`
+	OrderNum string  `json:"order"`
+	Sum      float64 `json:"sum"`
 }
 
 func New(log *slog.Logger, s WithdrawalSaver, su UserProvider, so OrderProvider) http.HandlerFunc {

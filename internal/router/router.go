@@ -28,7 +28,7 @@ type Storage interface {
 	GetBalance(ctx context.Context, userLogin string) (models.Balance, error)
 
 	GetWithdrawals(ctx context.Context, userLogin string) ([]models.Withdrawal, error)
-	SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum int64) error
+	SaveWithdrawal(ctx context.Context, userLogin string, orderNum string, sum float64) error
 }
 
 func New(log *slog.Logger, storage Storage, tokenSecret string, tokenExpires time.Duration) chi.Router {
