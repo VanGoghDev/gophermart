@@ -70,7 +70,7 @@ func (s *Storage) RegisterUser(ctx context.Context, login string, password strin
 
 func (s *Storage) GetUser(ctx context.Context, login string) (user models.User, err error) {
 	const op = "storage.GetUser"
-	row := s.db.QueryRow(ctx, "SELECT login, pass_hash, balance FROM users")
+	row := s.db.QueryRow(ctx, "SELECT login, pass_hash, balance FROM users WHERE login = $1", login)
 	err = row.Scan(&user.Login, &user.PassHash, &user.Balance)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
