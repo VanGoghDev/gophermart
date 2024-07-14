@@ -271,15 +271,15 @@ func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum
 		}
 	}()
 
-	var ordrNum string
-	err = tx.QueryRow(ctx, "SELECT number FROM orders WHERE number = $1", orderNum).
-		Scan(&ordrNum)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
-		return fmt.Errorf("%s: %w", op, err)
-	}
+	// var ordrNum string
+	// err = tx.QueryRow(ctx, "SELECT number FROM orders WHERE number = $1", orderNum).
+	// 	Scan(&ordrNum)
+	// if err != nil {
+	// 	if errors.Is(err, pgx.ErrNoRows) {
+	// 		return ErrNotFound
+	// 	}
+	// 	return fmt.Errorf("%s: %w", op, err)
+	// }
 
 	var balance float64
 	err = tx.QueryRow(ctx, "SELECT balance FROM users WHERE login=$1 FOR UPDATE", userLogin).Scan(&balance)
