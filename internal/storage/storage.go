@@ -152,11 +152,7 @@ func (s *Storage) SaveOrder(
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
-	if ordrNum != "" {
-		return ErrConflict
-	}
-
-	if usrLogin != userLogin && usrLogin != "" {
+	if ordrNum != "" && userLogin == usrLogin {
 		return ErrConflict
 	}
 

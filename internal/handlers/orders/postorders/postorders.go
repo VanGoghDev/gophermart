@@ -60,7 +60,7 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 		err = s.SaveOrder(r.Context(), string(bNum), userLogin, models.New)
 		if err != nil {
 			if errors.Is(err, storage.ErrConflict) {
-				w.WriteHeader(http.StatusConflict)
+				w.WriteHeader(http.StatusOK)
 				return
 			}
 			if errors.Is(err, storage.ErrAlreadyExists) {
