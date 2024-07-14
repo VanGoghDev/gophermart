@@ -25,6 +25,7 @@ var (
 	ErrAlreadyExists  = errors.New("record alreay exists")
 	ErrNotEnoughFunds = errors.New("not enough funds")
 	ErrConflict       = errors.New("conflict")
+	ErrGoodConflict   = errors.New("positive conflict")
 )
 
 type Storage struct {
@@ -152,7 +153,10 @@ func (s *Storage) SaveOrder(
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
-	if ordrNum != "" && userLogin == usrLogin {
+	if ordrNum != "" {
+		if userLogin == usrLogin {
+			return ErrGoodConflict
+		}
 		return ErrConflict
 	}
 
