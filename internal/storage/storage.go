@@ -181,10 +181,21 @@ func (s *Storage) SaveOrder(
 func (s *Storage) GetBalance(ctx context.Context, userLogin string) (balance models.Balance, err error) {
 	const op = "storage.GetBalance"
 
-	row := s.db.QueryRow(ctx, "SELECT u.balance, total FROM users u "+
-		"INNER JOIN (SELECT user_login, SUM(withdrawal_sum) AS total FROM withdrawals GROUP BY user_login) "+
-		"W On W.user_login = u.login WHERE u.login = $1;", userLogin)
-	err = row.Scan(&balance.Current, &balance.Withdrawn)
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return models.Balance{}, fmt.Errorf("%s: %w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				s.log.ErrorContext(ctx, "%s: %w", op, err)
+			}
+		}
+	}()
+
+	var blnc float64
+	err = tx.QueryRow(ctx, "SELECT balance FROM users WHERE login = $1", userLogin).
+		Scan(&blnc)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Balance{}, ErrNotFound
@@ -192,7 +203,23 @@ func (s *Storage) GetBalance(ctx context.Context, userLogin string) (balance mod
 		return models.Balance{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return balance, nil
+	var withdraw float64
+	err = tx.QueryRow(ctx,
+		"SELECT COALESCE(SUM(withdrawal_sum), 0)  AS total FROM withdrawals where user_login = $1",
+		userLogin,
+	).
+		Scan(&withdraw)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Balance{}, ErrNotFound
+		}
+		return models.Balance{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return models.Balance{
+		Current:   blnc,
+		Withdrawn: withdraw,
+	}, nil
 }
 
 func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) (withdrawals []models.Withdrawal, err error) {

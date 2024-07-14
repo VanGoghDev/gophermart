@@ -3,11 +3,13 @@ package getbalance
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/VanGoghDev/gophermart/internal/domain/models"
 	"github.com/VanGoghDev/gophermart/internal/middleware/auth"
+	"github.com/VanGoghDev/gophermart/internal/storage"
 )
 
 type BalanceProvider interface {
@@ -27,6 +29,10 @@ func New(log *slog.Logger, s BalanceProvider) http.HandlerFunc {
 
 		balance, err := s.GetBalance(r.Context(), userLogin)
 		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 			log.ErrorContext(r.Context(), "%s: %w", op, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
