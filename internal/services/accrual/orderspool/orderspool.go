@@ -46,7 +46,7 @@ func (o *OrdersPool) GetOrders(
 		}
 
 		for _, v := range orders {
-			time.Sleep(time.Second * 30) // пока заглушка. переделать на норм вариант.
+			time.Sleep(time.Second * 3) // пока заглушка. переделать на норм вариант.
 			ordersCh <- v
 		}
 	}
