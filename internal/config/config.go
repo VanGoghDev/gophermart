@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"time"
@@ -24,10 +25,14 @@ func New() (config *Config, err error) {
 		return nil, fmt.Errorf("failed to parse config %w", err)
 	}
 	// не забыть, что в этот раз флаги имеют более высокий приоритет
-	var flagAddress, flagDsn, flagAccrualAddress string
+	var flagAddress, flagDsn, flagAccrualAddress, flagSecret string
+	var flagTokenExpires, defaultTokenLifeTime int64
+	defaultTokenLifeTime = 3
 	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port")
 	flag.StringVar(&flagDsn, "d", "", "db connection string")
 	flag.StringVar(&flagAccrualAddress, "r", "localhost:8085", "accrual address")
+	flag.StringVar(&flagSecret, "s", "secret", "token secret")
+	flag.Int64Var(&flagTokenExpires, "t", defaultTokenLifeTime, "token expires (hours)")
 	flag.Parse()
 
 	if flagAddress != "" {
@@ -35,16 +40,22 @@ func New() (config *Config, err error) {
 	}
 
 	if flagDsn != "" {
-		cfg.AccrualAddress = flagAddress
+		cfg.DSN = flagDsn
 	}
 
 	if flagAccrualAddress != "" {
 		cfg.AccrualAddress = flagAccrualAddress
 	}
 
-	if cfg.DSN == "" {
-		return &Config{}, fmt.Errorf("db connection string not set")
+	if flagSecret != "" {
+		cfg.Secret = flagSecret
 	}
+
+	if cfg.DSN == "" {
+		return &Config{}, errors.New("db connection string not set")
+	}
+
+	cfg.TokenExpires = time.Hour * time.Duration(flagTokenExpires)
 
 	return &cfg, nil
 }
