@@ -346,7 +346,7 @@ func (s *Storage) UpdateStatusAndBalance(ctx context.Context, accrual models.Acc
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = tx.Prepare(ctx, "updStatus", "UPDATE orders SET status = $1 accrual = $2 WHERE number = $3")
+	_, err = tx.Prepare(ctx, "updStatus", "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3")
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
