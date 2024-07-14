@@ -29,7 +29,7 @@ func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		fmt.Sprintf("http://%s/api/orders/%s", c.host, orderNum),
+		fmt.Sprintf("%s/api/orders/%s", c.host, orderNum),
 		http.NoBody,
 	)
 	if err != nil {
