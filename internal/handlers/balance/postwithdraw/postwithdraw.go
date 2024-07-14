@@ -58,7 +58,7 @@ func New(log *slog.Logger, s WithdrawalSaver, su UserProvider, so OrderProvider)
 		err = s.SaveWithdrawal(r.Context(), userLogin, req.OrderNum, req.Sum)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
-				w.WriteHeader(http.StatusUnprocessableEntity)
+				w.WriteHeader(http.StatusOK)
 				return
 			}
 			if errors.Is(err, storage.ErrNotEnoughFunds) {
