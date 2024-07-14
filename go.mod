@@ -17,6 +17,8 @@ require (
 
 require github.com/caarlos0/env v3.5.0+incompatible
 
+require github.com/ShiraazMoollatjie/goluhn v0.0.0-20211017190329-0d86158c056a // indirect
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect

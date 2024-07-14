@@ -88,7 +88,7 @@ func TestNew(t *testing.T) {
 			args: args{
 				login:       "testLogin",
 				contentType: "text/plain",
-				body:        "a",
+				body:        "123",
 			},
 			want: want{
 				http.StatusUnprocessableEntity,

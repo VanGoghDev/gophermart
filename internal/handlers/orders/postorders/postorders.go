@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/ShiraazMoollatjie/goluhn"
 	"github.com/VanGoghDev/gophermart/internal/domain/models"
 	"github.com/VanGoghDev/gophermart/internal/lib/logger/sl"
 	"github.com/VanGoghDev/gophermart/internal/middleware/auth"
@@ -49,10 +50,8 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 		// проверка на валидность номера заказа
 
 		// 422 — неверный формат номера заказа;
-
-		// тут пока такая заглушка. Переделать на нормальную
-		// валидацию через алгоритм Луна. Юнит тест тоже.
-		if string(bNum) == "a" {
+		err = goluhn.Validate(string(bNum))
+		if err != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}
