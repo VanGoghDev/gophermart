@@ -49,6 +49,7 @@ func run(ctx context.Context) error {
 
 	oPool := orderspool.New(slog, s)
 	updtr := updater.New(slog, s, cfg.AccrualAddress)
+	log.Printf("вот такой конфиг в тестах %s", cfg.AccrualAddress)
 	accrl := accrual.New(slog, oPool, updtr)
 
 	// waitgroup?
