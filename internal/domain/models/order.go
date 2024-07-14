@@ -18,5 +18,5 @@ type Order struct {
 	Number             string      `json:"number"`
 	UserLogin          string      `json:"-"`
 	Status             OrderStatus `json:"status"`
-	Accrual            int64       `json:"accrual,omitempty"`
+	Accrual            float64     `json:"accrual,omitempty"`
 }
