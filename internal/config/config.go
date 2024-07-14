@@ -28,9 +28,9 @@ func New() (config *Config, err error) {
 	var flagAddress, flagDsn, flagAccrualAddress, flagSecret string
 	var flagTokenExpires, defaultTokenLifeTime int64
 	defaultTokenLifeTime = 3
-	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port")
+	flag.StringVar(&flagAddress, "a", "", "address and port")
 	flag.StringVar(&flagDsn, "d", "", "db connection string")
-	flag.StringVar(&flagAccrualAddress, "r", "localhost:8085", "accrual address")
+	flag.StringVar(&flagAccrualAddress, "r", "", "accrual address")
 	flag.StringVar(&flagSecret, "s", "secret", "token secret")
 	flag.Int64Var(&flagTokenExpires, "t", defaultTokenLifeTime, "token expires (hours)")
 	flag.Parse()
