@@ -27,9 +27,6 @@ type UserProvider interface {
 
 func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.auth.login.New"
-		log = log.With("op", op)
-
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/json" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -48,7 +45,7 @@ func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Dura
 		}
 
 		if err := validator.New().Struct(req); err != nil {
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "validation failed", sl.Err(err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -57,7 +54,7 @@ func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Dura
 		user, err := s.GetUser(r.Context(), req.Login)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
-				w.WriteHeader(http.StatusUnauthorized) // нужна ли эта обработка?
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
 			log.ErrorContext(r.Context(), "failed to get user", sl.Err(err))

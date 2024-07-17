@@ -32,9 +32,6 @@ type Request struct {
 
 func New(log *slog.Logger, s WithdrawalSaver, su UserProvider, so OrderProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.balance.postwithdraw.New"
-		log = log.With("op", op)
-
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/json" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -65,7 +62,7 @@ func New(log *slog.Logger, s WithdrawalSaver, su UserProvider, so OrderProvider)
 				w.WriteHeader(http.StatusPaymentRequired)
 				return
 			}
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "failed to save withdrawal", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

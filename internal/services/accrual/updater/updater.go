@@ -39,9 +39,6 @@ func (u *Updater) Update(
 	ordersCh <-chan models.Order,
 	wg *sync.WaitGroup,
 ) (err error) {
-	const op = "services.accrual.updater.Update"
-	log := u.log.With("op", op)
-
 	wg.Add(1)
 	defer wg.Done()
 
@@ -49,14 +46,14 @@ func (u *Updater) Update(
 		// запросим статус обработки у стороннего сервиса
 		accrl, err := u.client.GetAccrual(ctx, order.Number)
 		if err != nil {
-			log.ErrorContext(ctx, "", sl.Err(err))
+			u.log.ErrorContext(ctx, "cannot access external accrual service", sl.Err(err))
 			continue
 		}
 
 		// обновим в бд
 		err = u.s.UpdateStatusAndBalance(ctx, accrl)
 		if err != nil {
-			log.ErrorContext(ctx, "", sl.Err(err))
+			u.log.ErrorContext(ctx, "failed to update status and balance", sl.Err(err))
 			continue
 		}
 	}

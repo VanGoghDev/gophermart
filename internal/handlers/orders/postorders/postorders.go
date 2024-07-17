@@ -24,9 +24,6 @@ type OrdersSaver interface {
 
 func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.orders.postorders.New"
-		log = log.With("op", op)
-
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "text/plain" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -47,9 +44,6 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 			return
 		}
 
-		// проверка на валидность номера заказа
-
-		// 422 — неверный формат номера заказа;
 		err = goluhn.Validate(string(bNum))
 		if err != nil {
 			w.WriteHeader(http.StatusUnprocessableEntity)

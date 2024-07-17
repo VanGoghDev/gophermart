@@ -24,8 +24,6 @@ func New(client http.Client, accrlHost string) *Client {
 }
 
 func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.Accrual, err error) {
-	const op = "services.accrual.client.GetAccrual"
-
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -33,12 +31,12 @@ func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.
 		http.NoBody,
 	)
 	if err != nil {
-		return models.Accrual{}, fmt.Errorf("%s: %w", op, err)
+		return models.Accrual{}, fmt.Errorf("failed to init request: %w", err)
 	}
 
 	r, err := c.client.Do(req)
 	if err != nil {
-		return models.Accrual{}, fmt.Errorf("%s: %w", op, err)
+		return models.Accrual{}, fmt.Errorf("failed to send request: %w", err)
 	}
 
 	defer func() {
@@ -56,11 +54,7 @@ func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.
 	dec := json.NewDecoder(r.Body)
 	err = dec.Decode(&accrl)
 	if err != nil {
-		return models.Accrual{}, fmt.Errorf("%s: %w", op, err)
-	}
-
-	if err != nil {
-		return models.Accrual{}, fmt.Errorf("%s: %w", op, err)
+		return models.Accrual{}, fmt.Errorf("failed to decode json: %w", err)
 	}
 
 	return accrl, nil

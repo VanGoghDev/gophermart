@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/VanGoghDev/gophermart/internal/domain/models"
+	"github.com/VanGoghDev/gophermart/internal/lib/logger/sl"
 	"github.com/VanGoghDev/gophermart/internal/middleware/auth"
 	"github.com/VanGoghDev/gophermart/internal/storage"
 )
@@ -18,8 +19,6 @@ type OrderProvider interface {
 
 func New(log *slog.Logger, s OrderProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.orders.getorders.New"
-
 		userLogin, ok := r.Context().Value(auth.UserLoginKey).(string)
 		if !ok {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -32,7 +31,7 @@ func New(log *slog.Logger, s OrderProvider) http.HandlerFunc {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
-			log.ErrorContext(r.Context(), "%s: %w", op, err)
+			log.ErrorContext(r.Context(), "failed to get orders from storage: %w", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

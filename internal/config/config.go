@@ -24,7 +24,7 @@ func New() (config *Config, err error) {
 	if err := env.Parse(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config %w", err)
 	}
-	// не забыть, что в этот раз флаги имеют более высокий приоритет
+
 	var flagAddress, flagDsn, flagAccrualAddress, flagSecret string
 	var flagTokenExpires, defaultTokenLifeTime int64
 	defaultTokenLifeTime = 3

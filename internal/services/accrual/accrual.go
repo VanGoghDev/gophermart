@@ -39,7 +39,6 @@ func (a *AccrualFetcher) RunService(ctx context.Context, g *errgroup.Group, wg *
 }
 
 func (a *AccrualFetcher) Run(ctx context.Context, g *errgroup.Group, wg *sync.WaitGroup) error {
-	const op = "services.accrual.Serve"
 	rateLimit := 5
 
 	// Здесь образуется очередь из заказов, которые нужно обновить
@@ -48,7 +47,7 @@ func (a *AccrualFetcher) Run(ctx context.Context, g *errgroup.Group, wg *sync.Wa
 	g.Go(func() error {
 		err := a.ordrPool.GetOrders(ctx, ordersCh, wg)
 		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return fmt.Errorf("failed to get orders: %w", err)
 		}
 		return nil
 	})
@@ -56,13 +55,13 @@ func (a *AccrualFetcher) Run(ctx context.Context, g *errgroup.Group, wg *sync.Wa
 	g.Go(func() error {
 		err := a.updater.Update(ctx, ordersCh, wg)
 		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return fmt.Errorf("failed to update order: %w", err)
 		}
 		return nil
 	})
 
 	if err := g.Wait(); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("group finished with error: %w", err)
 	}
 
 	return nil

@@ -19,9 +19,6 @@ type WithdrawalsProvider interface {
 
 func New(log *slog.Logger, s WithdrawalsProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.balance.getwithdrawals.New"
-		log = log.With("op", op)
-
 		userLogin, ok := r.Context().Value(auth.UserLoginKey).(string)
 		if !ok {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -43,7 +40,7 @@ func New(log *slog.Logger, s WithdrawalsProvider) http.HandlerFunc {
 		enc := json.NewEncoder(w)
 		err = enc.Encode(withdrawals)
 		if err != nil {
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "failed to encode withdrawals json", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

@@ -26,9 +26,6 @@ type Request struct {
 
 func New(log *slog.Logger, s Register, secret string, tokenExpires time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.auth.register.New"
-		log = log.With("op", op)
-
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/json" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -40,13 +37,13 @@ func New(log *slog.Logger, s Register, secret string, tokenExpires time.Duration
 		// 400 неверный формат запроса.
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(req); err != nil {
-			log.WarnContext(r.Context(), "", sl.Err(err))
+			log.WarnContext(r.Context(), "failed to decode request", sl.Err(err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if err := validator.New().Struct(req); err != nil {
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "validation failed", sl.Err(err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -55,20 +52,20 @@ func New(log *slog.Logger, s Register, secret string, tokenExpires time.Duration
 		if err != nil {
 			// 409 логин уже занят.
 			if errors.Is(err, storage.ErrAlreadyExists) {
-				log.ErrorContext(r.Context(), "", sl.Err(err))
+				log.ErrorContext(r.Context(), "login already exists", sl.Err(err))
 				w.WriteHeader(http.StatusConflict)
 				return
 			}
 
 			// 500 внутренняя ошибка сервера.
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "failed to register user", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		token, err := auth.GrantToken(login, secret, tokenExpires)
 		if err != nil {
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "failed to grant token", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
