@@ -35,7 +35,7 @@ func New() (config *Config, err error) {
 	flag.StringVar(&flagAccrualAddress, "r", "", "accrual address")
 	flag.StringVar(&flagSecret, "s", "secret", "token secret")
 	flag.Int64Var(&flagTokenExpires, "e", defaultTokenLifeTime, "token expires (hours)")
-	flag.Int64Var(&flagAccrualTimeout, "t", defaultAccrualTimeout, "timeout for accrual requests (minutes)")
+	flag.Int64Var(&flagAccrualTimeout, "t", defaultAccrualTimeout, "timeout for accrual requests (seconds)")
 	flag.Parse()
 
 	if flagAddress != "" {
@@ -55,7 +55,7 @@ func New() (config *Config, err error) {
 	}
 
 	if flagAccrualTimeout > 0 {
-		cfg.AccrualTimeout = time.Minute * time.Duration(flagAccrualTimeout)
+		cfg.AccrualTimeout = time.Second * time.Duration(flagAccrualTimeout)
 	}
 
 	if flagTokenExpires > 0 {
