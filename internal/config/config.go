@@ -34,7 +34,7 @@ func New() (config *Config, err error) {
 	flag.StringVar(&flagDsn, "d", "", "db connection string")
 	flag.StringVar(&flagAccrualAddress, "r", "", "accrual address")
 	flag.StringVar(&flagSecret, "s", "secret", "token secret")
-	flag.Int64Var(&flagTokenExpires, "t", defaultTokenLifeTime, "token expires (hours)")
+	flag.Int64Var(&flagTokenExpires, "e", defaultTokenLifeTime, "token expires (hours)")
 	flag.Int64Var(&flagAccrualTimeout, "t", defaultAccrualTimeout, "timeout for accrual requests (minutes)")
 	flag.Parse()
 
