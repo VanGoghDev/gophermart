@@ -29,7 +29,7 @@ func New() (config *Config, err error) {
 	var flagAddress, flagDsn, flagAccrualAddress, flagSecret string
 	var flagTokenExpires, defaultTokenLifeTime, flagAccrualTimeout, defaultAccrualTimeout int64
 	defaultTokenLifeTime = 3
-	defaultAccrualTimeout = 30
+	defaultAccrualTimeout = 3
 	flag.StringVar(&flagAddress, "a", "", "address and port")
 	flag.StringVar(&flagDsn, "d", "", "db connection string")
 	flag.StringVar(&flagAccrualAddress, "r", "", "accrual address")
