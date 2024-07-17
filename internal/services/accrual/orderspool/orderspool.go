@@ -16,14 +16,16 @@ type storage interface {
 }
 
 type OrdersPool struct {
-	log *slog.Logger
-	s   storage
+	log     *slog.Logger
+	s       storage
+	timeOut time.Duration
 }
 
-func New(log *slog.Logger, s storage) *OrdersPool {
+func New(log *slog.Logger, s storage, t time.Duration) *OrdersPool {
 	return &OrdersPool{
-		log: log,
-		s:   s,
+		log:     log,
+		s:       s,
+		timeOut: t,
 	}
 }
 
@@ -46,7 +48,7 @@ func (o *OrdersPool) GetOrders(
 		}
 
 		for _, v := range orders {
-			time.Sleep(time.Second * 3) // пока заглушка. переделать на норм вариант.
+			time.Sleep(o.timeOut)
 			ordersCh <- v
 		}
 	}

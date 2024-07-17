@@ -16,6 +16,7 @@ type Config struct {
 	AccrualAddress string        `env:"ACCRUAL_SYSTEM_ADDRESS"`
 	Secret         string        `env:"SECRET"`
 	TokenExpires   time.Duration `env:"TOKEN_EXPIRES"`
+	AccrualTimeout time.Duration `env:"ACCRUALL_TIMEOUT"`
 }
 
 func New() (config *Config, err error) {
@@ -26,13 +27,15 @@ func New() (config *Config, err error) {
 	}
 
 	var flagAddress, flagDsn, flagAccrualAddress, flagSecret string
-	var flagTokenExpires, defaultTokenLifeTime int64
+	var flagTokenExpires, defaultTokenLifeTime, flagAccrualTimeout, defaultAccrualTimeout int64
 	defaultTokenLifeTime = 3
+	defaultAccrualTimeout = 30
 	flag.StringVar(&flagAddress, "a", "", "address and port")
 	flag.StringVar(&flagDsn, "d", "", "db connection string")
 	flag.StringVar(&flagAccrualAddress, "r", "", "accrual address")
 	flag.StringVar(&flagSecret, "s", "secret", "token secret")
 	flag.Int64Var(&flagTokenExpires, "t", defaultTokenLifeTime, "token expires (hours)")
+	flag.Int64Var(&flagAccrualTimeout, "t", defaultAccrualTimeout, "timeout for accrual requests (minutes)")
 	flag.Parse()
 
 	if flagAddress != "" {
@@ -51,11 +54,17 @@ func New() (config *Config, err error) {
 		cfg.Secret = flagSecret
 	}
 
+	if flagAccrualTimeout > 0 {
+		cfg.AccrualTimeout = time.Minute * time.Duration(flagAccrualTimeout)
+	}
+
+	if flagTokenExpires > 0 {
+		cfg.TokenExpires = time.Hour * time.Duration(flagTokenExpires)
+	}
+
 	if cfg.DSN == "" {
 		return &Config{}, errors.New("db connection string not set")
 	}
-
-	cfg.TokenExpires = time.Hour * time.Duration(flagTokenExpires)
 
 	return &cfg, nil
 }

@@ -19,17 +19,14 @@ import (
 
 func main() {
 	if err := run(context.Background()); err != nil {
-		const op = "main"
-		log.Fatalf("%s: %v", op, err)
+		log.Fatalf("failed to run app: %v", err)
 	}
 }
 
 func run(ctx context.Context) error {
-	const op = "main.run"
-
 	cfg, err := config.New()
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("failed to init config: %w", err)
 	}
 
 	slog := logger.New(cfg.Env)
@@ -37,35 +34,34 @@ func run(ctx context.Context) error {
 
 	s, err := storage.New(ctx, slog, cfg.DSN)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("failed to init storage: %w", err)
 	}
 
 	err = s.RunMigrations(cfg.DSN)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	rtr := router.New(slog, s, cfg.Secret, cfg.TokenExpires)
 
-	oPool := orderspool.New(slog, s)
+	oPool := orderspool.New(slog, s, cfg.AccrualTimeout)
 	updtr := updater.New(slog, s, cfg.AccrualAddress)
 	accrl := accrual.New(slog, oPool, updtr)
 
-	// waitgroup?
 	var wg sync.WaitGroup
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.Go(func() error {
 		err := accrl.RunService(ctx, g, &wg)
 		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return fmt.Errorf("failed to run accrual service: %w", err)
 		}
 		return nil
 	})
 
 	err = http.ListenAndServe(cfg.Address, rtr)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("failed to run http server: %w", err)
 	}
 
 	wg.Wait()
