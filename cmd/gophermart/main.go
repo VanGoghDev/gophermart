@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"time"
 
 	"github.com/VanGoghDev/gophermart/internal/config"
+	"github.com/VanGoghDev/gophermart/internal/lib/logger/sl"
 	"github.com/VanGoghDev/gophermart/internal/logger"
 	"github.com/VanGoghDev/gophermart/internal/router"
 	"github.com/VanGoghDev/gophermart/internal/services/accrual"
@@ -23,7 +27,16 @@ func main() {
 	}
 }
 
+const (
+	timeoutServerShutdown = time.Second * 5
+)
+
 func run(ctx context.Context) error {
+	rootCtx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancelCtx()
+
+	g, ctx := errgroup.WithContext(rootCtx)
+
 	cfg, err := config.New()
 	if err != nil {
 		return fmt.Errorf("failed to init config: %w", err)
@@ -50,7 +63,6 @@ func run(ctx context.Context) error {
 
 	var wg sync.WaitGroup
 
-	g, ctx := errgroup.WithContext(context.Background())
 	g.Go(func() error {
 		err := accrl.RunService(ctx, g, &wg)
 		if err != nil {
@@ -59,11 +71,33 @@ func run(ctx context.Context) error {
 		return nil
 	})
 
-	err = http.ListenAndServe(cfg.Address, rtr)
-	if err != nil {
-		return fmt.Errorf("failed to run http server: %w", err)
+	srv := &http.Server{
+		Addr:    cfg.Address,
+		Handler: rtr,
+	}
+	g.Go(func() error {
+		err = srv.ListenAndServe()
+		if err != nil {
+			return fmt.Errorf("failed to run http server: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		slog.InfoContext(ctx, "server has been shutdown")
+		<-ctx.Done()
+
+		shutdownTimeoutCtx, cancelShutdownTimeoutCtx := context.WithTimeout(context.Background(), timeoutServerShutdown)
+		defer cancelShutdownTimeoutCtx()
+		if err := srv.Shutdown(shutdownTimeoutCtx); err != nil {
+			slog.ErrorContext(ctx, "failed to shutdown server: %w", sl.Err(err))
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("failed to wait group: %w", err)
 	}
 
-	wg.Wait()
 	return nil
 }
