@@ -22,20 +22,29 @@ import (
 )
 
 func main() {
-	if err := run(context.Background()); err != nil {
+	if err := run(); err != nil {
 		log.Fatalf("failed to run app: %v", err)
 	}
 }
 
 const (
+	timeoutShutdown       = time.Second * 10
 	timeoutServerShutdown = time.Second * 5
 )
 
-func run(ctx context.Context) error {
+func run() error {
 	rootCtx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancelCtx()
 
 	g, ctx := errgroup.WithContext(rootCtx)
+
+	context.AfterFunc(ctx, func() {
+		ctx, cancelCtx := context.WithTimeout(context.Background(), timeoutShutdown)
+		defer cancelCtx()
+
+		<-ctx.Done()
+		log.Fatal("failed to gracefully shutdown the service")
+	})
 
 	cfg, err := config.New()
 	if err != nil {
