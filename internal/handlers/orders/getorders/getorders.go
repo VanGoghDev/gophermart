@@ -19,8 +19,9 @@ type OrderProvider interface {
 
 func New(log *slog.Logger, s OrderProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userLogin, ok := r.Context().Value(auth.UserLoginKey).(string)
-		if !ok {
+		userLogin, err := auth.GetLogin(r)
+		if err != nil {
+			log.ErrorContext(r.Context(), "failed to get userLogin from context: %w")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -41,6 +42,7 @@ func New(log *slog.Logger, s OrderProvider) http.HandlerFunc {
 		enc := json.NewEncoder(w)
 		err = enc.Encode(orders)
 		if err != nil {
+			log.ErrorContext(r.Context(), "failed to encode orders json: %w")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

@@ -19,8 +19,9 @@ type BalanceProvider interface {
 
 func New(log *slog.Logger, s BalanceProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userLogin, ok := r.Context().Value(auth.UserLoginKey).(string)
-		if !ok {
+		userLogin, err := auth.GetLogin(r)
+		if err != nil {
+			log.ErrorContext(r.Context(), "failed to fetch user login from context")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -41,6 +42,7 @@ func New(log *slog.Logger, s BalanceProvider) http.HandlerFunc {
 		enc := json.NewEncoder(w)
 		err = enc.Encode(balance)
 		if err != nil {
+			log.ErrorContext(r.Context(), "failed to encode response on getbalance: %w", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

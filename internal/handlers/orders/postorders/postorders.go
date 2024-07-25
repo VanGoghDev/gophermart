@@ -30,8 +30,8 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 			return
 		}
 
-		userLogin, ok := r.Context().Value(auth.UserLoginKey).(string)
-		if !ok {
+		userLogin, err := auth.GetLogin(r)
+		if err != nil {
 			log.ErrorContext(r.Context(), "failed to fetch user login from context")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -39,7 +39,7 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 
 		bNum, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "failed to read body", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -65,7 +65,7 @@ func New(log *slog.Logger, s OrdersSaver, sp OrderProvider) http.HandlerFunc {
 				w.WriteHeader(http.StatusOK)
 				return
 			}
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "failed to save order", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

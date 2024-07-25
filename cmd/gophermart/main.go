@@ -33,6 +33,8 @@ const (
 )
 
 func run() error {
+	var wg sync.WaitGroup
+
 	rootCtx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancelCtx()
 
@@ -59,18 +61,23 @@ func run() error {
 		return fmt.Errorf("failed to init storage: %w", err)
 	}
 
-	err = s.RunMigrations(cfg.DSN)
-	if err != nil {
-		return fmt.Errorf("failed to run migrations: %w", err)
-	}
+	g.Go(func() error {
+		wg.Add(1)
+		defer wg.Done()
+
+		defer slog.DebugContext(ctx, "closed DB")
+
+		<-ctx.Done()
+
+		s.Close()
+		return nil
+	})
 
 	rtr := router.New(slog, s, cfg.Secret, cfg.TokenExpires)
 
 	oPool := orderspool.New(slog, s, cfg.AccrualTimeout)
 	updtr := updater.New(slog, s, cfg.AccrualAddress)
 	accrl := accrual.New(slog, oPool, updtr)
-
-	var wg sync.WaitGroup
 
 	g.Go(func() error {
 		err := accrl.RunService(ctx, g, &wg)
@@ -85,6 +92,7 @@ func run() error {
 		Handler: rtr,
 	}
 	g.Go(func() error {
+		wg.Add(1)
 		err = srv.ListenAndServe()
 		if err != nil {
 			return fmt.Errorf("failed to run http server: %w", err)
@@ -93,6 +101,9 @@ func run() error {
 	})
 
 	g.Go(func() error {
+		wg.Add(1)
+		defer wg.Done()
+
 		slog.InfoContext(ctx, "server has been shutdown")
 		<-ctx.Done()
 

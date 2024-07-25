@@ -19,8 +19,9 @@ type WithdrawalsProvider interface {
 
 func New(log *slog.Logger, s WithdrawalsProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userLogin, ok := r.Context().Value(auth.UserLoginKey).(string)
-		if !ok {
+		userLogin, err := auth.GetLogin(r)
+		if err != nil {
+			log.ErrorContext(r.Context(), "failed to fetch user login from context")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -31,7 +32,7 @@ func New(log *slog.Logger, s WithdrawalsProvider) http.HandlerFunc {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
-			log.ErrorContext(r.Context(), "", sl.Err(err))
+			log.ErrorContext(r.Context(), "failed to fetch withdrawals", sl.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

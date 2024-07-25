@@ -2,24 +2,18 @@ package login
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/VanGoghDev/gophermart/internal/domain/models"
+	hauth "github.com/VanGoghDev/gophermart/internal/handlers/auth"
 	"github.com/VanGoghDev/gophermart/internal/lib/logger/sl"
 	"github.com/VanGoghDev/gophermart/internal/services/auth"
 	"github.com/VanGoghDev/gophermart/internal/storage"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/go-playground/validator.v9"
 )
-
-type Request struct {
-	Login    string `json:"login" validate:"required"`
-	Password string `json:"password" validate:"required"`
-}
 
 type UserProvider interface {
 	GetUser(ctx context.Context, login string) (models.User, error)
@@ -27,27 +21,9 @@ type UserProvider interface {
 
 func New(log *slog.Logger, s UserProvider, secret string, tokenExpires time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		contentType := r.Header.Get("Content-Type")
-		if contentType != "application/json" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		req := &Request{}
-
-		dec := json.NewDecoder(r.Body)
-
-		err := dec.Decode(req)
-		if err != nil {
-			log.ErrorContext(r.Context(), "failed to decode request body", sl.Err(err))
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		if err := validator.New().Struct(req); err != nil {
-			log.ErrorContext(r.Context(), "validation failed", sl.Err(err))
-			w.WriteHeader(http.StatusBadRequest)
-			return
+		code, req := hauth.ValidateUserRequest(r.Context(), log, r)
+		if code >= http.StatusBadRequest {
+			w.WriteHeader(code)
 		}
 
 		// 401 неверная пара логин/пароль.

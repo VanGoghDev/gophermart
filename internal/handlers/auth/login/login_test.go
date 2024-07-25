@@ -38,7 +38,7 @@ func TestNew(t *testing.T) {
 		want want
 	}{
 		{
-			name: "must return 200 status (invalid content type)",
+			name: "must return 200 status",
 			args: args{
 				login:       "test",
 				password:    "123",

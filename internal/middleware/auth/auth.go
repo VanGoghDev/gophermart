@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -9,9 +10,19 @@ import (
 	"github.com/go-chi/chi/middleware"
 )
 
-type contextKey string
+type contextKey int
 
-const UserLoginKey contextKey = "user-login"
+const (
+	KeyUserLogin contextKey = iota
+)
+
+func GetLogin(r *http.Request) (login string, err error) {
+	userLogin, ok := r.Context().Value(KeyUserLogin).(string)
+	if !ok {
+		return "", fmt.Errorf("unable to cast given context value to string")
+	}
+	return userLogin, nil
+}
 
 func New(log *slog.Logger, secret string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -41,7 +52,7 @@ func New(log *slog.Logger, secret string) func(next http.Handler) http.Handler {
 						w.WriteHeader(http.StatusUnauthorized)
 						return
 					}
-					ctx = context.WithValue(ctx, UserLoginKey, login)
+					ctx = context.WithValue(ctx, KeyUserLogin, login)
 				}
 			} else {
 				http.Error(w, "Authorization header is empty", http.StatusUnauthorized)

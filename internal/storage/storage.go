@@ -42,10 +42,18 @@ func New(ctx context.Context, slg *slog.Logger, storagePath string) (*Storage, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to init pool connection: %w", err)
 	}
-	return &Storage{
+
+	s := &Storage{
 		log: slg,
 		db:  pool,
-	}, nil
+	}
+
+	err = s.RunMigrations(storagePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	return s, nil
 }
 
 func (s *Storage) RegisterUser(ctx context.Context, login string, password string) (lgn string, err error) {
@@ -399,4 +407,8 @@ func (s *Storage) RunMigrations(dsn string) error {
 		}
 	}
 	return nil
+}
+
+func (s *Storage) Close() {
+	s.db.Close()
 }

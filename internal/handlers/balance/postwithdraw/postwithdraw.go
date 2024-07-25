@@ -38,16 +38,18 @@ func New(log *slog.Logger, s WithdrawalSaver, su UserProvider, so OrderProvider)
 			return
 		}
 
-		userLogin, ok := r.Context().Value(auth.UserLoginKey).(string)
-		if !ok {
+		userLogin, err := auth.GetLogin(r)
+		if err != nil {
+			log.ErrorContext(r.Context(), "failed to fetch user login from context")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		req := &Request{}
 		dec := json.NewDecoder(r.Body)
-		err := dec.Decode(req)
+		err = dec.Decode(req)
 		if err != nil {
+			log.ErrorContext(r.Context(), "failed to decode withrawal json: %w")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
