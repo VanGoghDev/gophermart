@@ -1,2 +1,0 @@
-ALTER TABLE withdrawals
-ALTER COLUMN processed_at DROP DEFAULT;
