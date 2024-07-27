@@ -14,9 +14,10 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -65,10 +66,10 @@ func (s *Storage) RegisterUser(ctx context.Context, login string, password strin
 	_, err = s.db.Exec(ctx, "INSERT INTO users(login, pass_hash) VALUES($1, $2)",
 		login, passHash)
 	if err != nil {
-		var pgErr *pq.Error
+		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return "", ErrAlreadyExists
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				return "", fmt.Errorf("%w: user with login %s exists", ErrAlreadyExists, login)
 			}
 		}
 		return "", fmt.Errorf("failed to insert users: %w", err)
@@ -82,7 +83,7 @@ func (s *Storage) GetUser(ctx context.Context, login string) (user models.User, 
 	err = row.Scan(&user.Login, &user.PassHash, &user.Balance)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.User{}, ErrNotFound
+			return models.User{}, fmt.Errorf("%w: user with login %s not found", ErrNotFound, login)
 		}
 		return models.User{}, fmt.Errorf("failed to select users: %w", err)
 	}
@@ -94,7 +95,7 @@ func (s *Storage) GetOrder(ctx context.Context, number string) (order models.Ord
 	err = row.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Order{}, ErrNotFound
+			return models.Order{}, fmt.Errorf("%w: order with number %s not found", ErrNotFound, number)
 		}
 		return models.Order{}, fmt.Errorf("failed to select order: %w", err)
 	}
@@ -112,7 +113,7 @@ func (s *Storage) GetOrders(ctx context.Context, userLogin string) (orders []mod
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, fmt.Errorf("%w: user %s have no orders", ErrNotFound, userLogin)
 		}
 	}
 
@@ -158,7 +159,7 @@ func (s *Storage) SaveOrder(
 	}
 	if ordrNum != "" {
 		if userLogin == usrLogin {
-			return ErrGoodConflict
+			return fmt.Errorf("%w: order %s belongs to another user", ErrGoodConflict, number)
 		}
 		return ErrConflict
 	}
@@ -199,7 +200,7 @@ func (s *Storage) GetBalance(ctx context.Context, userLogin string) (balance mod
 		Scan(&blnc)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Balance{}, ErrNotFound
+			return models.Balance{}, fmt.Errorf("%w: user %s not found", ErrNotFound, userLogin)
 		}
 		return models.Balance{}, fmt.Errorf("failed to select balance: %w", err)
 	}
@@ -212,7 +213,7 @@ func (s *Storage) GetBalance(ctx context.Context, userLogin string) (balance mod
 		Scan(&withdraw)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Balance{}, ErrNotFound
+			return models.Balance{}, fmt.Errorf("%w: no withdrawals for user %s", ErrNotFound, userLogin)
 		}
 		return models.Balance{}, fmt.Errorf("failed to select withdrawals: %w", err)
 	}
@@ -233,7 +234,7 @@ func (s *Storage) GetWithdrawals(ctx context.Context, userLogin string) (withdra
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, fmt.Errorf("%w: no withdrawals for user %s", ErrNotFound, userLogin)
 		}
 		return nil, fmt.Errorf("failed to select order: %w", err)
 	}
@@ -275,7 +276,7 @@ func (s *Storage) SaveWithdrawal(ctx context.Context, userLogin string, orderNum
 		return fmt.Errorf("failed to select balance: %w", err)
 	}
 	if balance < sum {
-		return ErrNotEnoughFunds
+		return fmt.Errorf("%w: user %s has balance < sum", ErrNotEnoughFunds, userLogin)
 	}
 
 	_, err = tx.Prepare(ctx, "insrtWithdrawals", "INSERT INTO withdrawals(user_login, order_id, withdrawal_sum)"+
@@ -313,10 +314,10 @@ func (s *Storage) GetOrdersByStatus(
 ) (orders []models.Order, err error) {
 	orders = make([]models.Order, 0)
 
-	rows, err := s.db.Query(ctx, "SELECT number FROM orders WHERE status = ANY($1)", pq.Array(statuses))
+	rows, err := s.db.Query(ctx, "SELECT number FROM orders WHERE status = ANY($1)", statuses)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, fmt.Errorf("%w: orders not found for given statuses %v", ErrNotFound, statuses)
 		}
 	}
 	defer rows.Close()

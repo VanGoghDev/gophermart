@@ -2,10 +2,11 @@ package auth
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"net/http"
 
+	"github.com/VanGoghDev/gophermart/internal/lib/logger/sl"
 	"github.com/VanGoghDev/gophermart/internal/services/auth"
 	"github.com/go-chi/chi/middleware"
 )
@@ -19,7 +20,7 @@ const (
 func GetLogin(r *http.Request) (login string, err error) {
 	userLogin, ok := r.Context().Value(KeyUserLogin).(string)
 	if !ok {
-		return "", fmt.Errorf("unable to cast given context value to string")
+		return "", errors.New("unable to cast given context value to string")
 	}
 	return userLogin, nil
 }
@@ -36,7 +37,7 @@ func New(log *slog.Logger, secret string) func(next http.Handler) http.Handler {
 			if token != "" {
 				authorized, err := auth.IsAuthorized(token, secret)
 				if err != nil || !authorized {
-					log.ErrorContext(r.Context(), "authorization failed: %w", err)
+					log.ErrorContext(r.Context(), "authorization failed: %w", sl.Err(err))
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
@@ -44,7 +45,7 @@ func New(log *slog.Logger, secret string) func(next http.Handler) http.Handler {
 					// достать claims
 					login, err := auth.ExtractLoginFromToken(token, secret)
 					if err != nil {
-						log.ErrorContext(r.Context(), "failed to get claims from token: %w", err)
+						log.ErrorContext(r.Context(), "failed to get claims from token: %w", sl.Err(err))
 						w.WriteHeader(http.StatusUnauthorized)
 						return
 					}

@@ -9,15 +9,17 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/golang/mock v1.6.0
 	github.com/jackc/pgx/v5 v5.6.0
-	github.com/lib/pq v1.10.9
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.23.0
 	gopkg.in/go-playground/validator.v9 v9.31.0
 )
 
-require github.com/caarlos0/env v3.5.0+incompatible
-
-require github.com/ShiraazMoollatjie/goluhn v0.0.0-20211017190329-0d86158c056a // indirect
+require (
+	github.com/ShiraazMoollatjie/goluhn v0.0.0-20211017190329-0d86158c056a
+	github.com/caarlos0/env v3.5.0+incompatible
+	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
