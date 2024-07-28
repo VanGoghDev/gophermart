@@ -195,22 +195,19 @@ func (s *Storage) GetBalance(ctx context.Context, userLogin string) (balance mod
 		}
 	}()
 
-	var blnc float64
-	err = tx.QueryRow(ctx, "SELECT balance FROM users WHERE login = $1", userLogin).
-		Scan(&blnc)
+	var blnc, withdraw float64
+	err = tx.QueryRow(ctx,
+		"SELECT balance, withdrawal_sum FROM users as u "+
+			"INNER JOIN (SELECT user_login, COALESCE(SUM(withdrawal_sum), 0) AS withdrawal_sum 	FROM withdrawals "+
+			"GROUP BY user_login) "+
+			"as w ON u.login = $1",
+		userLogin).Scan(&blnc, &withdraw)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Balance{}, fmt.Errorf("%w: user %s not found", ErrNotFound, userLogin)
 		}
 		return models.Balance{}, fmt.Errorf("failed to select balance: %w", err)
 	}
-
-	var withdraw float64
-	err = tx.QueryRow(ctx,
-		"SELECT COALESCE(SUM(withdrawal_sum), 0)  AS total FROM withdrawals where user_login = $1",
-		userLogin,
-	).
-		Scan(&withdraw)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Balance{}, fmt.Errorf("%w: no withdrawals for user %s", ErrNotFound, userLogin)

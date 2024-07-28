@@ -104,8 +104,8 @@ func run() error {
 		wg.Add(1)
 		defer wg.Done()
 
-		slog.InfoContext(ctx, "server has been shutdown")
 		<-ctx.Done()
+		slog.InfoContext(ctx, "server has been shutdown")
 
 		shutdownTimeoutCtx, cancelShutdownTimeoutCtx := context.WithTimeout(context.Background(), timeoutServerShutdown)
 		defer cancelShutdownTimeoutCtx()
