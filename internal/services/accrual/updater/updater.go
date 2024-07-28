@@ -50,7 +50,7 @@ func (u *Updater) Update(
 	for {
 		select {
 		case <-waitCh:
-			time.Sleep(time.Second * u.retryTimeout)
+			time.Sleep(u.retryTimeout)
 		case order := <-ordersCh:
 			// запросим статус обработки у стороннего сервиса
 

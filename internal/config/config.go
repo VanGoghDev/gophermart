@@ -40,7 +40,7 @@ func New() (config *Config, err error) {
 	flag.Int64Var(&flagTokenExpires, "e", defaultTokenLifeTime, "token expires (hours)")
 	flag.Int64Var(&flagAccrualTimeout, "t", defaultAccrualTimeout, "timeout for accrual requests (seconds)")
 	flag.Int64Var(&flagWorkersCount, "w", 1, "number of workers")
-	flag.Int64Var(&flagAccrualRetryTimeout, "t", defaultAccrualTimeout,
+	flag.Int64Var(&flagAccrualRetryTimeout, "rt", defaultAccrualTimeout,
 		"timeout for retry accrual requests  after 428(seconds)")
 
 	flag.Parse()
