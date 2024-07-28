@@ -17,13 +17,16 @@ type AccrualFetcher struct {
 
 	ordrPool *orderspool.OrdersPool
 	updater  *updater.Updater
+
+	workersCount int32
 }
 
-func New(log *slog.Logger, oPool *orderspool.OrdersPool, updtr *updater.Updater) *AccrualFetcher {
+func New(log *slog.Logger, oPool *orderspool.OrdersPool, updtr *updater.Updater, wrkrsCount int32) *AccrualFetcher {
 	return &AccrualFetcher{
-		log:      log,
-		ordrPool: oPool,
-		updater:  updtr,
+		log:          log,
+		ordrPool:     oPool,
+		updater:      updtr,
+		workersCount: wrkrsCount,
 	}
 }
 
@@ -39,10 +42,11 @@ func (a *AccrualFetcher) RunService(ctx context.Context, g *errgroup.Group, wg *
 }
 
 func (a *AccrualFetcher) Run(ctx context.Context, g *errgroup.Group, wg *sync.WaitGroup) error {
-	rateLimit := 5
-
 	// Здесь образуется очередь из заказов, которые нужно обновить
-	ordersCh := make(chan models.Order, rateLimit)
+	ordersCh := make(chan models.Order, a.workersCount)
+
+	// канал, в который приходит сигнал о том, что нужно подождать с новыми запросами, если пришел ответ со статусом 429
+	waitCh := make(chan bool, 1)
 
 	g.Go(func() error {
 		err := a.ordrPool.GetOrders(ctx, ordersCh, wg)
@@ -53,7 +57,7 @@ func (a *AccrualFetcher) Run(ctx context.Context, g *errgroup.Group, wg *sync.Wa
 	})
 
 	g.Go(func() error {
-		err := a.updater.Update(ctx, ordersCh, wg)
+		err := a.updater.Update(ctx, ordersCh, waitCh, wg)
 		if err != nil {
 			return fmt.Errorf("failed to update order: %w", err)
 		}

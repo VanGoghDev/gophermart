@@ -197,8 +197,8 @@ func (s *Storage) GetBalance(ctx context.Context, userLogin string) (balance mod
 
 	var blnc, withdraw float64
 	err = tx.QueryRow(ctx,
-		"SELECT balance, withdrawal_sum FROM users as u "+
-			"INNER JOIN (SELECT user_login, COALESCE(SUM(withdrawal_sum), 0) AS withdrawal_sum 	FROM withdrawals "+
+		"SELECT balance, coalesce(withdrawal_sum , 0) as withdrawal_sum FROM users as u "+
+			"LEFT JOIN (SELECT user_login, COALESCE(SUM(withdrawal_sum), 0) AS withdrawal_sum 	FROM withdrawals "+
 			"GROUP BY user_login) "+
 			"as w ON u.login = $1",
 		userLogin).Scan(&blnc, &withdraw)

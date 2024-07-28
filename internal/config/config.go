@@ -10,13 +10,15 @@ import (
 )
 
 type Config struct {
-	Address        string        `env:"RUN_ADDRESS"`
-	Env            string        `env:"ENV"`
-	DSN            string        `env:"DATABASE_URI"`
-	AccrualAddress string        `env:"ACCRUAL_SYSTEM_ADDRESS"`
-	Secret         string        `env:"SECRET"`
-	TokenExpires   time.Duration `env:"TOKEN_EXPIRES"`
-	AccrualTimeout time.Duration `env:"ACCRUALL_TIMEOUT"`
+	Address             string        `env:"RUN_ADDRESS"`
+	Env                 string        `env:"ENV"`
+	DSN                 string        `env:"DATABASE_URI"`
+	AccrualAddress      string        `env:"ACCRUAL_SYSTEM_ADDRESS"`
+	Secret              string        `env:"SECRET"`
+	TokenExpires        time.Duration `env:"TOKEN_EXPIRES"`
+	AccrualTimeout      time.Duration `env:"ACCRUALL_TIMEOUT"`
+	AccrualRetryTimeout time.Duration `env:"ACCRUAL_RETRY_TIMEOUT"`
+	WorkersCount        int32         `env:"WORKERS_COUNT"`
 }
 
 func New() (config *Config, err error) {
@@ -27,7 +29,8 @@ func New() (config *Config, err error) {
 	}
 
 	var flagAddress, flagDsn, flagAccrualAddress, flagSecret string
-	var flagTokenExpires, defaultTokenLifeTime, flagAccrualTimeout, defaultAccrualTimeout int64
+	var flagTokenExpires, defaultTokenLifeTime, flagAccrualTimeout, defaultAccrualTimeout,
+		flagWorkersCount, flagAccrualRetryTimeout int64
 	defaultTokenLifeTime = 3
 	defaultAccrualTimeout = 3
 	flag.StringVar(&flagAddress, "a", "", "address and port")
@@ -36,6 +39,10 @@ func New() (config *Config, err error) {
 	flag.StringVar(&flagSecret, "s", "secret", "token secret")
 	flag.Int64Var(&flagTokenExpires, "e", defaultTokenLifeTime, "token expires (hours)")
 	flag.Int64Var(&flagAccrualTimeout, "t", defaultAccrualTimeout, "timeout for accrual requests (seconds)")
+	flag.Int64Var(&flagWorkersCount, "w", 1, "number of workers")
+	flag.Int64Var(&flagAccrualRetryTimeout, "t", defaultAccrualTimeout,
+		"timeout for retry accrual requests  after 428(seconds)")
+
 	flag.Parse()
 
 	if flagAddress != "" {
@@ -60,6 +67,14 @@ func New() (config *Config, err error) {
 
 	if flagTokenExpires > 0 {
 		cfg.TokenExpires = time.Hour * time.Duration(flagTokenExpires)
+	}
+
+	if flagWorkersCount > 0 {
+		cfg.WorkersCount = int32(flagWorkersCount)
+	}
+
+	if flagAccrualRetryTimeout > 0 {
+		cfg.AccrualRetryTimeout = time.Second * time.Duration(flagAccrualRetryTimeout)
 	}
 
 	if cfg.DSN == "" {

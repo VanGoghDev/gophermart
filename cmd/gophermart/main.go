@@ -76,8 +76,8 @@ func run() error {
 	rtr := router.New(slog, s, cfg.Secret, cfg.TokenExpires)
 
 	oPool := orderspool.New(slog, s, cfg.AccrualTimeout)
-	updtr := updater.New(slog, s, cfg.AccrualAddress)
-	accrl := accrual.New(slog, oPool, updtr)
+	updtr := updater.New(slog, s, cfg.AccrualAddress, cfg.AccrualRetryTimeout)
+	accrl := accrual.New(slog, oPool, updtr, cfg.WorkersCount)
 
 	g.Go(func() error {
 		err := accrl.RunService(ctx, g, &wg)

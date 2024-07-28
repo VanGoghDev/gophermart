@@ -16,6 +16,10 @@ type Client struct {
 	client http.Client
 }
 
+var (
+	ErrToManyRequests = errors.New("too many requests")
+)
+
 func New(client http.Client, accrlHost string) *Client {
 	return &Client{
 		client: client,
@@ -45,9 +49,13 @@ func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.
 			err = errc
 		}
 	}()
-
+	return models.Accrual{}, fmt.Errorf("%w: accrual response with 429 status code", ErrToManyRequests)
 	if r.StatusCode == http.StatusNoContent {
 		return models.Accrual{}, errors.New("order is not registered")
+	}
+
+	if r.StatusCode == http.StatusTooManyRequests {
+		return models.Accrual{}, fmt.Errorf("%w: accrual response with 429 status code", ErrToManyRequests)
 	}
 
 	var accrl models.Accrual
