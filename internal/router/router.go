@@ -14,6 +14,7 @@ import (
 	"github.com/VanGoghDev/gophermart/internal/handlers/orders/getorders"
 	"github.com/VanGoghDev/gophermart/internal/handlers/orders/postorders"
 	"github.com/VanGoghDev/gophermart/internal/middleware/auth"
+	"github.com/VanGoghDev/gophermart/internal/middleware/compressor"
 	"github.com/go-chi/chi"
 )
 
@@ -40,6 +41,7 @@ func New(log *slog.Logger, storage Storage, tokenSecret string, tokenExpires tim
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.New(log, tokenSecret))
+			r.Use(compressor.New(log))
 			r.Post("/orders", postorders.New(log, storage, storage))
 			r.Get("/orders", getorders.New(log, storage))
 
