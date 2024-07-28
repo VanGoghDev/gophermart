@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+
+	"github.com/VanGoghDev/gophermart/internal/lib/logger/sl"
 )
 
 // CompressWriter implements http.ResponseWriter.
@@ -80,7 +82,7 @@ func (c *CompressReader) CloseGzRReader() error {
 	return nil
 }
 
-func New(slog *slog.Logger) func(next http.Handler) http.Handler {
+func New(log *slog.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -103,11 +105,11 @@ func New(slog *slog.Logger) func(next http.Handler) http.Handler {
 
 			// Если данные пришли в сжатом формате, то заменим body после декомпрессии.
 			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-				slog.Debug("reading compressed body")
+				log.DebugContext(ctx, "reading compressed body")
 
 				cr, err := NewCompressReader(r.Body)
 				if err != nil {
-					slog.WarnContext(ctx, "Unable to create CompressReader: %v", err)
+					log.WarnContext(ctx, "Unable to create CompressReader: %v", sl.Err(err))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -115,7 +117,7 @@ func New(slog *slog.Logger) func(next http.Handler) http.Handler {
 				defer func() {
 					err = cr.Close()
 					if err != nil {
-						slog.WarnContext(ctx, "failed to close compress reader: %v", err)
+						log.WarnContext(ctx, "failed to close compress reader: %v", sl.Err(err))
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
