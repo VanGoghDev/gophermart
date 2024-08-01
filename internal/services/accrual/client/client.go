@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/VanGoghDev/gophermart/internal/domain/models"
 )
@@ -27,7 +28,7 @@ func New(client http.Client, accrlHost string) *Client {
 	}
 }
 
-func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.Accrual, err error) {
+func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.Accrual, timeout time.Duration, err error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -35,12 +36,12 @@ func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.
 		http.NoBody,
 	)
 	if err != nil {
-		return models.Accrual{}, fmt.Errorf("failed to init request: %w", err)
+		return models.Accrual{}, 0, fmt.Errorf("failed to init request: %w", err)
 	}
 
 	r, err := c.client.Do(req)
 	if err != nil {
-		return models.Accrual{}, fmt.Errorf("failed to send request: %w", err)
+		return models.Accrual{}, 0, fmt.Errorf("failed to send request: %w", err)
 	}
 
 	defer func() {
@@ -50,19 +51,19 @@ func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.
 		}
 	}()
 	if r.StatusCode == http.StatusNoContent {
-		return models.Accrual{}, errors.New("order is not registered")
+		return models.Accrual{}, 0, errors.New("order is not registered")
 	}
 
 	if r.StatusCode == http.StatusTooManyRequests {
-		return models.Accrual{}, fmt.Errorf("%w: accrual response with 429 status code", ErrToManyRequests)
+		return models.Accrual{}, time.Second, fmt.Errorf("%w: accrual response with 429 status code", ErrToManyRequests)
 	}
 
 	var accrl models.Accrual
 	dec := json.NewDecoder(r.Body)
 	err = dec.Decode(&accrl)
 	if err != nil {
-		return models.Accrual{}, fmt.Errorf("failed to decode json: %w", err)
+		return models.Accrual{}, 0, fmt.Errorf("failed to decode json: %w", err)
 	}
 
-	return accrl, nil
+	return accrl, 0, nil
 }

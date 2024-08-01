@@ -7,25 +7,27 @@ import (
 	"sync"
 
 	"github.com/VanGoghDev/gophermart/internal/domain/models"
+	"github.com/VanGoghDev/gophermart/internal/services/accrual/dispatcher"
 	"github.com/VanGoghDev/gophermart/internal/services/accrual/orderspool"
-	"github.com/VanGoghDev/gophermart/internal/services/accrual/updater"
+	"github.com/VanGoghDev/gophermart/internal/storage"
 	"golang.org/x/sync/errgroup"
 )
 
 type AccrualFetcher struct {
 	log *slog.Logger
 
-	ordrPool *orderspool.OrdersPool
-	updater  *updater.Updater
+	ordrPool   *orderspool.OrdersPool
+	dispatcher *dispatcher.Dispatcher
 
 	workersCount int32
 }
 
-func New(log *slog.Logger, oPool *orderspool.OrdersPool, updtr *updater.Updater, wrkrsCount int32) *AccrualFetcher {
+func New(log *slog.Logger, oPool *orderspool.OrdersPool, s *storage.Storage, a string, wrkrsCount int32) *AccrualFetcher {
+	d := dispatcher.New(log, s, a, wrkrsCount)
 	return &AccrualFetcher{
 		log:          log,
 		ordrPool:     oPool,
-		updater:      updtr,
+		dispatcher:   d,
 		workersCount: wrkrsCount,
 	}
 }
@@ -45,9 +47,6 @@ func (a *AccrualFetcher) Run(ctx context.Context, g *errgroup.Group, wg *sync.Wa
 	// Здесь образуется очередь из заказов, которые нужно обновить
 	ordersCh := make(chan models.Order, a.workersCount)
 
-	// канал, в который приходит сигнал о том, что нужно подождать с новыми запросами, если пришел ответ со статусом 429
-	waitCh := make(chan bool, 1)
-
 	g.Go(func() error {
 		err := a.ordrPool.GetOrders(ctx, ordersCh, wg)
 		if err != nil {
@@ -56,10 +55,11 @@ func (a *AccrualFetcher) Run(ctx context.Context, g *errgroup.Group, wg *sync.Wa
 		return nil
 	})
 
+	wg.Add(1)
 	g.Go(func() error {
-		err := a.updater.Update(ctx, ordersCh, waitCh, wg)
+		err := a.dispatcher.Run(ctx, wg, g, ordersCh)
 		if err != nil {
-			return fmt.Errorf("failed to update order: %w", err)
+			return fmt.Errorf("%w: failed to run dispatcher", err)
 		}
 		return nil
 	})
