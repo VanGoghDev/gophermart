@@ -22,7 +22,13 @@ type AccrualFetcher struct {
 	workersCount int32
 }
 
-func New(log *slog.Logger, oPool *orderspool.OrdersPool, s *storage.Storage, a string, wrkrsCount int32) *AccrualFetcher {
+func New(
+	log *slog.Logger,
+	oPool *orderspool.OrdersPool,
+	s *storage.Storage,
+	a string,
+	wrkrsCount int32,
+) *AccrualFetcher {
 	d := dispatcher.New(log, s, a, wrkrsCount)
 	return &AccrualFetcher{
 		log:          log,

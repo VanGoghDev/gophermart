@@ -28,7 +28,10 @@ func New(client http.Client, accrlHost string) *Client {
 	}
 }
 
-func (c *Client) GetAccrual(ctx context.Context, orderNum string) (order models.Accrual, timeout time.Duration, err error) {
+func (c *Client) GetAccrual(
+	ctx context.Context,
+	orderNum string,
+) (order models.Accrual, timeout time.Duration, err error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
