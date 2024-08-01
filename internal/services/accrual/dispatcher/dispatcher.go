@@ -137,11 +137,6 @@ func (d *Dispatcher) trySendRequest(
 				return fmt.Errorf("%w: failed to update order status and balance in storage", err)
 			}
 		}
-
-		timeout := SendRequest(ctx)
-		if timeout > 0 {
-			notifyCh <- timeout
-		}
 	}
 	return nil
 }
